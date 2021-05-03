@@ -21,14 +21,16 @@ class FaceSegmentation():
         print(f"Model '{model_path}' is loaded")
         self.model = model
 
-    def image_to_mask(self, img_path: str, mask_size: int, out_size: int) -> np.ndarray:
+    def img_to_ndarray(self, img_path: str) -> np.ndarray:
+        image = cv2.imread(img_path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        return image
+
+    def image_to_mask(self, image: np.ndarray, mask_size: int, out_size: int) -> np.ndarray:
 
         transform = transforms.Compose([
             transforms.Resize((mask_size, mask_size)),
             transforms.ToTensor(), ])
-
-        image = cv2.imread(img_path)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         pil_img = Image.fromarray(image)
         torch_img = transform(pil_img)
@@ -50,9 +52,16 @@ class FaceSegmentation():
 
         return mask
 
-    def write_to_txt(mask: np.ndarray, mask_name: str) -> None:
+    def write_to_txt(self, mask: np.ndarray, mask_name: str) -> None:
         with open(f'{mask_name}.txt', 'wt') as opt_file:
             for i in mask:
                 for j in i:
                     opt_file.write(str(j))
                 opt_file.write('\n')
+
+
+FS = FaceSegmentation('checkpoints/model.pt')
+
+mask = FS.image_to_mask(FS.img_to_ndarray('99999.jpg'), 256, 512)
+
+FS.write_to_txt(mask, '99999')
