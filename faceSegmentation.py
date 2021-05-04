@@ -7,20 +7,6 @@ from torchvision import transforms
 from nets.MobileNetV2_unet import MobileNetV2_unet
 
 
-def write_to_txt(mask_arr: np.ndarray, mask_name: str) -> None:
-    with open(f'{mask_name}.txt', 'wt') as opt_file:
-        for i in mask_arr:
-            for j in i:
-                opt_file.write(str(j))
-            opt_file.write('\n')
-
-
-def img_to_ndarray(img_path: str) -> np.ndarray:
-    image = cv2.imread(img_path)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    return image
-
-
 class FaceSegmentation():
     """
     mostly come from
@@ -34,6 +20,11 @@ class FaceSegmentation():
         model.eval()
         print(f"Model '{model_path}' is loaded")
         self.model = model
+
+    def img_to_ndarray(self, img_path: str) -> np.ndarray:
+        image = cv2.imread(img_path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        return image
 
     def image_to_mask(self, image: np.ndarray, mask_size: int, out_size: int) -> np.ndarray:
 
@@ -60,3 +51,17 @@ class FaceSegmentation():
                           fy=(out_size/mask_size), interpolation=cv2.INTER_LINEAR)
 
         return mask
+
+    def write_to_txt(self, mask: np.ndarray, mask_name: str) -> None:
+        with open(f'{mask_name}.txt', 'wt') as opt_file:
+            for i in mask:
+                for j in i:
+                    opt_file.write(str(j))
+                opt_file.write('\n')
+
+
+FS = FaceSegmentation('checkpoints/model.pt')
+
+mask = FS.image_to_mask(FS.img_to_ndarray('99999.jpg'), 256, 512)
+
+FS.write_to_txt(mask, '99999')
