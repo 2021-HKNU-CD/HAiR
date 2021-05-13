@@ -27,8 +27,9 @@ class FaceSegmentation():
     https://github.com/kampta/face-seg
     """
 
-    def __init__(self, model_path: str):
+    def __init__(self):
         model = MobileNetV2_unet(None).to(torch.device("cpu"))
+        model_path = '../../../checkpoints/model.pt'
         state_dict = torch.load(model_path, map_location="cpu")
         model.load_state_dict(state_dict)
         model.eval()
