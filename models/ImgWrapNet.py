@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from nets.MobileNetV2_unet import MobileNetV2_unet
+from models.MobileNetV2_unet import MobileNetV2_unet
 
 
 def _init_unet(state_dict):

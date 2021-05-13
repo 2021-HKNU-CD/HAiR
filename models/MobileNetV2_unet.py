@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.nn.functional import interpolate
 
-from nets.MobileNetV2 import MobileNetV2, InvertedResidual
+from models.MobileNetV2 import MobileNetV2, InvertedResidual
 
 
 class MobileNetV2_unet(nn.Module):
