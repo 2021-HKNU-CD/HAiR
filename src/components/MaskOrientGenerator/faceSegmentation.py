@@ -4,7 +4,7 @@ from PIL import Image
 import torch
 from torchvision import transforms
 
-from nets.MobileNetV2_unet import MobileNetV2_unet
+from models.MobileNetV2_unet import MobileNetV2_unet
 
 
 def write_to_txt(mask_arr: np.ndarray, mask_name: str) -> None:
@@ -29,7 +29,7 @@ class FaceSegmentation():
 
     def __init__(self):
         model = MobileNetV2_unet(None).to(torch.device("cpu"))
-        model_path = '../../../checkpoints/model.pt'
+        model_path = '../../../models/checkpoints/model.pt'
         state_dict = torch.load(model_path, map_location="cpu")
         model.load_state_dict(state_dict)
         model.eval()
