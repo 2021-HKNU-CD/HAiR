@@ -1,6 +1,7 @@
+import cv2
 import numpy as np
 
-from models.faceFeature import faceFeature
+from models.faceFeature import FaceFeature
 
 
 class BoundingBox:
@@ -8,7 +9,8 @@ class BoundingBox:
     origin_image로 부터 눈, 코, 입 좌표를 추출하고
     얼굴 중심을 구한 뒤 회전각을 구하고 Margin을 구해서 origin_image에서 bounding box를 구합니다.
     """
-    def __init__(self, original_image: np.ndarray):
+
+    def __init__(self, original_image: np.ndarray, facefeat_model_path: str):
         '''
         param original_image : 1920 * 1080 크기의 카메라로 들어온 입력 이미지
         '''
@@ -16,7 +18,7 @@ class BoundingBox:
         self.margin = None
         self.theta = None
         self.face_center = None
-        self.faceFeat = faceFeature()
+        self.faceFeat = FaceFeature(model_path=facefeat_model_path)
 
     def get_bounding_box(self) -> tuple[int, int, int, int]:
         '''
@@ -26,9 +28,50 @@ class BoundingBox:
         # BoundingBox = 얼굴 중심 ~ Margin*(sin(회전각) + cos(회전각))
         left_top, right_top, left_bottom, right_bottom = 0, 0, 0, 0
 
+        width, height = len(self.original_image), len(self.original_image[0])
+        print(width, height)
+
+        # 왼쪽눈, 오른쪽눈, 입의 위치 파악
         left_eye, right_eye, mouth = self.faceFeat.get(self.original_image)
 
+        # 얼굴의 중심
+        self.face_center = (sum((left_eye[0], right_eye[0], mouth[0])) // 3,
+                            sum((left_eye[1], right_eye[1], mouth[1])) // 3)
 
+        middle_of_face = self.face_center
+
+        # 두 눈을 이용해서 얼굴의 회전각파악
+        x1 = left_eye[0]
+        y1 = left_eye[1]
+        x2 = right_eye[0]
+        y2 = right_eye[1]
+        m = (y1 - y2) / (x1 - x2)
+        rotation = np.rad2deg(m)
+        self.theta = rotation
+
+        # Margin
+        distance_between_eyes = abs(y1 - y2) + abs(x1 - x2)
+        self.margin = distance_between_eyes * 2
+
+        # top 얼굴의 위
+
+        # bottom 얼굴의 아래
+
+        # left 얼굴의 왼쪽
+
+        # right 얼굴의 오른쪽
+
+        # test purpose
+        output = self.original_image
+        output = cv2.line(output, left_eye, left_eye, (255, 0, 0), 5)
+        output = cv2.line(output, right_eye, right_eye, (0, 0, 255), 5)
+        output = cv2.line(output, mouth, mouth, (0, 255, 0), 5)
+        output = cv2.line(output, middle_of_face, middle_of_face, (128, 128, 128), 5)
+        # output = cv2.line(output, top, top, (256, 256, 256), 5)
+        cv2.imwrite('test0.jpg', output)
+        matrix = cv2.getRotationMatrix2D(middle_of_face, rotation, 1)
+        output = cv2.warpAffine(output, matrix, (len(self.original_image[0]), len(self.original_image)))
+        cv2.imwrite('test1.jpg', output)
 
         return left_top, right_top, left_bottom, right_bottom
 
@@ -46,3 +89,5 @@ class BoundingBox:
         return : 스타일 변환이 모두 완료된 1920 * 1080 크기의 이미지를 반환합니다.
         '''
         pass
+
+

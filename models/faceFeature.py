@@ -16,10 +16,10 @@ FACIAL_LANDMARKS_INDEXES = OrderedDict([
 
 
 class FaceFeature:
-    def __init__(self):
+    def __init__(self, model_path: str):
         self.facial_features_cordinates = {}
         self.detector = dlib.get_frontal_face_detector()
-        self.predictor = dlib.shape_predictor('checkpoints/shape_predictor_68_face_landmarks.dat')
+        self.predictor = dlib.shape_predictor(model_path)
 
     def get(self, image: np.ndarray):
         gray_scale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -68,13 +68,6 @@ class FaceFeature:
                         sum([y for _, y in mouth_pts]) // len(mouth_pts))
 
         return center_left_eye, center_right_eye, center_mouth
-        # print(FACIAL_LANDMARKS_INDEXES["Right_Eye"])
-        # print(FACIAL_LANDMARKS_INDEXES["Mouth"])
 
-        # return the output image
-        # print(self.facial_features_cordinates)
-        # return output
-
-
-faceFeature = FaceFeature()
-faceFeature.get(cv2.imread('../data/test/unnamed.jpg'))
+# faceFeature = FaceFeature()
+# faceFeature.get(cv2.imread('../data/test/unnamed.jpg'))
