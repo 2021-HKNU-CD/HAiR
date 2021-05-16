@@ -74,12 +74,20 @@ class BoundingBox:
                  int(middle_of_face[1] + (self.margin * math.sin(m))))
 
         # left_upper 얼굴의 왼쪽 위
+        left_upper = (int(top[0] - (self.margin * math.cos(m))),
+                      int(top[1] - (self.margin * math.sin(m))))
 
         # left_lower 얼굴의 왼쪽 아래
+        left_lower = (int(bottom[0] - (self.margin * math.cos(m))),
+                      int(bottom[1] - (self.margin * math.sin(m))))
 
         # right_upper 얼굴의 오른쪽 위
+        right_upper = (int(top[0] + (self.margin * math.cos(m))),
+                       int(top[1] + (self.margin * math.sin(m))))
 
         # right_lower 얼굴의 오른쪽 아래
+        right_lower = (int(bottom[0] + (self.margin * math.cos(m))),
+                       int(bottom[1] + (self.margin * math.sin(m))))
 
         # test purpose
         output = self.original_image
@@ -91,6 +99,10 @@ class BoundingBox:
         output = cv2.line(output, bottom, bottom, (127, 127, 255), 5)
         output = cv2.line(output, left, left, (127, 255, 127), 5)
         output = cv2.line(output, right, right, (0, 0, 0), 5)
+        output = cv2.line(output, left_upper, left_upper, (0, 0, 0), 5)
+        output = cv2.line(output, left_lower, left_lower, (0, 0, 0), 5)
+        output = cv2.line(output, right_upper, right_upper, (0, 0, 0), 5)
+        output = cv2.line(output, right_lower, right_lower, (0, 0, 0), 5)
         cv2.imwrite('test0.jpg', output)
         matrix = cv2.getRotationMatrix2D(middle_of_face, rotation, 1)
         output = cv2.warpAffine(output, matrix, (len(self.original_image[0]), len(self.original_image)))
