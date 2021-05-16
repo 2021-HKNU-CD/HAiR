@@ -21,7 +21,7 @@ class BoundingBox:
         self.face_center = None
         self.faceFeat = FaceFeature(model_path=facefeat_model_path)
 
-    def get_bounding_box(self) -> tuple[int, int, int, int]:
+    def get_bounding_box(self) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
         """
         1920 * 1080 원본 이미지에서 origin_patch 영역의 좌상단, 우상단, 좌하단, 우하단 영역을 반환합니다.
         """
@@ -30,7 +30,6 @@ class BoundingBox:
         left_top, right_top, left_bottom, right_bottom = 0, 0, 0, 0
 
         width, height = len(self.original_image), len(self.original_image[0])
-        print(width, height)
 
         # 왼쪽눈, 오른쪽눈, 입의 위치 파악
         left_eye, right_eye, mouth = self.faceFeat.get(self.original_image)
@@ -47,10 +46,7 @@ class BoundingBox:
         x2 = right_eye[0]
         y2 = right_eye[1]
         m = (y1 - y2) / (x1 - x2)
-        print(y1, y2, x1, x2)
-        print(m)
         rotation = np.rad2deg(math.atan(m))
-        print('rotation :', rotation)
         self.theta = rotation
 
         # Margin
@@ -89,20 +85,40 @@ class BoundingBox:
         right_lower = (int(bottom[0] + (self.margin * math.cos(m))),
                        int(bottom[1] + (self.margin * math.sin(m))))
 
+        # original_patch 의 꼭짓점 반환
+        min_xy = (min([x for x in [left_upper[0], left_lower[0], right_upper[0], right_lower[0]]]),
+                  min([x for x in [left_upper[1], left_lower[1], right_upper[1], right_lower[1]]]))
+        max_xy = (max([x for x in [left_upper[0], left_lower[0], right_upper[0], right_lower[0]]]),
+                  max([x for x in [left_upper[1], left_lower[1], right_upper[1], right_lower[1]]]))
+
+        # 각 꼭짓점 정의
+        left_top = min_xy
+        left_bottom = (min_xy[0], max_xy[1])
+        right_top = (max_xy[0], min_xy[1])
+        right_bottom = max_xy
+
         # test purpose
         output = self.original_image
         output = cv2.line(output, left_eye, left_eye, (255, 0, 0), 5)
         output = cv2.line(output, right_eye, right_eye, (0, 0, 255), 5)
         output = cv2.line(output, mouth, mouth, (0, 255, 0), 5)
         output = cv2.line(output, middle_of_face, middle_of_face, (128, 128, 128), 5)
+
         output = cv2.line(output, top, top, (255, 127, 127), 5)
         output = cv2.line(output, bottom, bottom, (127, 127, 255), 5)
         output = cv2.line(output, left, left, (127, 255, 127), 5)
         output = cv2.line(output, right, right, (0, 0, 0), 5)
-        output = cv2.line(output, left_upper, left_upper, (0, 0, 0), 5)
-        output = cv2.line(output, left_lower, left_lower, (0, 0, 0), 5)
-        output = cv2.line(output, right_upper, right_upper, (0, 0, 0), 5)
-        output = cv2.line(output, right_lower, right_lower, (0, 0, 0), 5)
+
+        output = cv2.line(output, left_upper, left_lower, (0, 0, 255), 5)
+        output = cv2.line(output, left_lower, right_lower, (0, 0, 255), 5)
+        output = cv2.line(output, right_upper, left_upper, (0, 0, 255), 5)
+        output = cv2.line(output, right_lower, right_upper, (0, 0, 255), 5)
+
+        output = cv2.line(output, left_top, left_bottom, (0, 0, 0), 5)
+        output = cv2.line(output, left_bottom, right_bottom, (0, 0, 0), 5)
+        output = cv2.line(output, right_top, left_top, (0, 0, 0), 5)
+        output = cv2.line(output, right_bottom, right_top, (0, 0, 0), 5)
+
         cv2.imwrite('test0.jpg', output)
         matrix = cv2.getRotationMatrix2D(middle_of_face, rotation, 1)
         output = cv2.warpAffine(output, matrix, (len(self.original_image[0]), len(self.original_image)))
