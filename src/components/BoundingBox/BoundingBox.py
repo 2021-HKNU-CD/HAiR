@@ -19,6 +19,7 @@ class BoundingBox:
         self.theta = None
         self.face_center = None
         self.faceFeat = FaceFeature(model_path=facefeat_model_path)
+        self.image_coords = []
 
     def get_bounding_box(self) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
         """
@@ -84,7 +85,7 @@ class BoundingBox:
         left_bottom = (min_xy[0], max_xy[1])
         right_top = (max_xy[0], min_xy[1])
         right_bottom = max_xy
-
+        self.image_coords = [left_top, right_top, left_bottom, right_bottom]
         return left_top, right_top, left_bottom, right_bottom
 
     def get_origin_patch(self) -> np.ndarray:
@@ -92,7 +93,7 @@ class BoundingBox:
         1920 * 1080 원본 이미지에서 origin_patch영역에 해당하는 이미지를 반환합니다.
         return : origin_patch영역에 해당하는 이미지
         """
-        left_top, right_top, left_bottom, right_bottom = self.get_bounding_box()
+        left_top, right_top, left_bottom, right_bottom = self.image_coords
         return self.original_image[left_top[1]:right_bottom[1], left_top[0]:right_bottom[0]]
 
     def set_origin_patch(self, processed_image: np.ndarray) -> np.ndarray:
@@ -101,7 +102,7 @@ class BoundingBox:
         param processed_image : 스타일 변환이 완료된 origin_patch
         return : 스타일 변환이 모두 완료된 1920 * 1080 크기의 이미지를 반환합니다.
         """
-        left_top, right_top, left_bottom, right_bottom = self.get_bounding_box()
+        left_top, right_top, left_bottom, right_bottom = self.image_coords
         origin: np.ndarray = self.original_image.copy()
         origin[left_top[1]:right_bottom[1], left_top[0]:right_bottom[0]] = processed_image
         return origin
