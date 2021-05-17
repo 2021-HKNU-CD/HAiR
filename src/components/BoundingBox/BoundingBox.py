@@ -1,4 +1,3 @@
-import cv2
 import numpy as np
 from numpy.lib import math
 
@@ -27,9 +26,6 @@ class BoundingBox:
         """
 
         # BoundingBox = 얼굴 중심 ~ Margin*(sin(회전각) + cos(회전각))
-        left_top, right_top, left_bottom, right_bottom = 0, 0, 0, 0
-
-        width, height = len(self.original_image), len(self.original_image[0])
 
         # 왼쪽눈, 오른쪽눈, 입의 위치 파악
         left_eye, right_eye, mouth = self.faceFeat.get(self.original_image)
@@ -51,7 +47,7 @@ class BoundingBox:
 
         # Margin
         distance_between_eyes = abs(y1 - y2) + abs(x1 - x2)
-        self.margin = distance_between_eyes * 1.5
+        self.margin = distance_between_eyes * 2
 
         # top 얼굴의 위
         top = (int(middle_of_face[0] - (self.margin * math.sin(-m))),
@@ -60,14 +56,6 @@ class BoundingBox:
         # bottom 얼굴의 아래
         bottom = (int(middle_of_face[0] + (self.margin * math.sin(-m))),
                   int(middle_of_face[1] + (self.margin * math.cos(-m))))
-
-        # left 얼굴의 왼쪽
-        left = (int(middle_of_face[0] - (self.margin * math.cos(m))),
-                int(middle_of_face[1] - (self.margin * math.sin(m))))
-
-        # right 얼굴의 오른쪽
-        right = (int(middle_of_face[0] + (self.margin * math.cos(m))),
-                 int(middle_of_face[1] + (self.margin * math.sin(m))))
 
         # left_upper 얼굴의 왼쪽 위
         left_upper = (int(top[0] - (self.margin * math.cos(m))),
@@ -97,46 +85,23 @@ class BoundingBox:
         right_top = (max_xy[0], min_xy[1])
         right_bottom = max_xy
 
-        # test purpose
-        output = self.original_image
-        output = cv2.line(output, left_eye, left_eye, (255, 0, 0), 5)
-        output = cv2.line(output, right_eye, right_eye, (0, 0, 255), 5)
-        output = cv2.line(output, mouth, mouth, (0, 255, 0), 5)
-        output = cv2.line(output, middle_of_face, middle_of_face, (128, 128, 128), 5)
-
-        output = cv2.line(output, top, top, (255, 127, 127), 5)
-        output = cv2.line(output, bottom, bottom, (127, 127, 255), 5)
-        output = cv2.line(output, left, left, (127, 255, 127), 5)
-        output = cv2.line(output, right, right, (0, 0, 0), 5)
-
-        output = cv2.line(output, left_upper, left_lower, (0, 0, 255), 5)
-        output = cv2.line(output, left_lower, right_lower, (0, 0, 255), 5)
-        output = cv2.line(output, right_upper, left_upper, (0, 0, 255), 5)
-        output = cv2.line(output, right_lower, right_upper, (0, 0, 255), 5)
-
-        output = cv2.line(output, left_top, left_bottom, (0, 0, 0), 5)
-        output = cv2.line(output, left_bottom, right_bottom, (0, 0, 0), 5)
-        output = cv2.line(output, right_top, left_top, (0, 0, 0), 5)
-        output = cv2.line(output, right_bottom, right_top, (0, 0, 0), 5)
-
-        cv2.imwrite('test0.jpg', output)
-        matrix = cv2.getRotationMatrix2D(middle_of_face, rotation, 1)
-        output = cv2.warpAffine(output, matrix, (len(self.original_image[0]), len(self.original_image)))
-        cv2.imwrite('test1.jpg', output)
-
         return left_top, right_top, left_bottom, right_bottom
 
     def get_origin_patch(self) -> np.ndarray:
-        '''
+        """
         1920 * 1080 원본 이미지에서 origin_patch영역에 해당하는 이미지를 반환합니다.
         return : origin_patch영역에 해당하는 이미지
-        '''
-        pass
+        """
+        left_top, right_top, left_bottom, right_bottom = self.get_bounding_box()
+        return self.original_image[left_top[1]:right_bottom[1], left_top[0]:right_bottom[0]]
 
     def set_origin_patch(self, processed_image: np.ndarray) -> np.ndarray:
-        '''
+        """
         1920 * 1080 원본 이미지의 origin_patch 영역을 processed_image로 대체해서 반환 합니다.
         param processed_image : 스타일 변환이 완료된 origin_patch
         return : 스타일 변환이 모두 완료된 1920 * 1080 크기의 이미지를 반환합니다.
-        '''
-        pass
+        """
+        left_top, right_top, left_bottom, right_bottom = self.get_bounding_box()
+        origin: np.ndarray = self.original_image.copy()
+        origin[left_top[1]:right_bottom[1], left_top[0]:right_bottom[0]] = processed_image
+        return origin
