@@ -54,12 +54,17 @@ class FaceFeature:
     def get(self, image: np.ndarray):
         gray_scale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         rects = self.detector(gray_scale, 1)
-        rect = rects[0]
-        # determine the facial landmarks for the face region, then
-        # convert the landmark (x, y)-coordinates to a NumPy array
-        shape = self.predictor(gray_scale, rect)
-        shape = shape_to_numpy_array(shape)
+        if rects:
+            # returns first face in list
+            rect = rects[0]
+            # determine the facial landmarks for the face region, then
+            # convert the landmark (x, y)-coordinates to a NumPy array
+            shape = self.predictor(gray_scale, rect)
+            shape = shape_to_numpy_array(shape)
 
-        left, right, mouth = get_feature(shape)
-        return left, right, mouth
+            left, right, mouth = get_feature(shape)
+            return left, right, mouth
+        else:
+            # if not a single face is present in image
+            raise Exception("face was not in an image")
 
