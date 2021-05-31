@@ -16,6 +16,7 @@ class BoundingBox:
         '''
         self.original_image = original_image
         self.margin = None
+        self.rotation = None
         self.theta = None
         self.face_center = None
         self.faceFeat = FaceFeature(model_path=facefeat_model_path)
@@ -44,7 +45,8 @@ class BoundingBox:
         y2 = right_eye[1]
         m = (y1 - y2) / (x1 - x2)
         rotation = np.rad2deg(math.atan(m))
-        self.theta = rotation
+        self.theta = m
+        self.rotation = rotation
 
         # Margin
         distance_between_eyes = abs(y1 - y2) + abs(x1 - x2)
