@@ -1,21 +1,27 @@
+import sys, os
 import numpy as np
+import cv2
 from src.transformers.Transformer import Transformer
 from src.components.Aligner import Aligner
 from src.components.BoundingBox import BoundingBox
 from src.components.Scaler import Scaler
 from src.components.MaskOrientGenerator import MaskOrientGenerator
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), 'MichiGAN-HAiR')))
+import michigan_driver
+
 class AppearanceTransformer(Transformer):
     def __init__(self):
-        self.C = 10
-        self.ref = 'a.jpg'
+        self.ref_image = 'a.jpg'
+        self.MichiGAN = michigan_driver.Driver(num_gpu=-1)
+
     def set_reference(self):
         pass
+
     def transform(self, original_image: np.ndarray) -> np.ndarray:
         # original_image : 1920 x 1080
         # return : 1920 x 1080
-        MichiGAN = None
-        ref_image = None
+        ref_image = cv2.imread('081680.jpg')
         
         bounding_box_src = BoundingBox(original_image)
         bounding_box_ref = BoundingBox(ref_image)
@@ -29,13 +35,24 @@ class AppearanceTransformer(Transformer):
         aligned_face_patch_ref = aligner_ref.align_forward(ref_image)
         ref_scaler = Scaler(aligned_face_patch_ref)
 
+        mask_orient = MaskOrientGenerator()
         scaled_src = src_scaler.scale_forward()
-        mask, orient = MaskOrientGenerator.generate(scaled_src)
+        mask, orient = mask_orient.generate(scaled_src)
 
         scaled_ref = ref_scaler.scale_forward()
-        mask_ref, orient_ref = MaskOrientGenerator(scaled_ref)
-        
-        generated_image = MichiGAN.forward(scaled_src, mask, orient, scaled_ref, mask_ref, orient_ref)
+        mask_ref, orient_ref = mask_orient.generate(scaled_ref)
+
+        orient_mask = mask_orient.generate_ma(orient_ref)
+
+        generated_image = self.MichiGAN.process(datas = {
+            'label_ref' : mask_ref,
+            'label_tag' : mask,
+            'orient_mask' : orient_mask,
+            'orient_tag' : orient,
+            'orient_ref' : orient_ref,
+            'image_ref' : scaled_ref,
+            'image_tag' : scaled_src,
+        })
 
         generated_image = src_scaler.scale_backward(generated_image)
         generated_image = aligner_src.align_backward(generated_image)
