@@ -7,8 +7,8 @@ from src.components.BoundingBox import BoundingBox
 from src.components.Scaler import Scaler
 from src.components.MaskOrientGenerator import MaskOrientGenerator
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), 'MichiGAN-HAiR')))
-import michigan_driver
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class AppearanceTransformer(Transformer):
     def __init__(self):
@@ -21,8 +21,8 @@ class AppearanceTransformer(Transformer):
     def transform(self, original_image: np.ndarray) -> np.ndarray:
         # original_image : 1920 x 1080
         # return : 1920 x 1080
-        ref_image = cv2.imread('081680.jpg')
-        
+        ref_image = cv2.imread(BASE_DIR + '/../../iu1.jpg')
+
         bounding_box_src = BoundingBox(original_image)
         bounding_box_ref = BoundingBox(ref_image)
 

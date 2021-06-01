@@ -3,6 +3,11 @@ from collections import OrderedDict
 import cv2
 import dlib
 import numpy as np
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+model_path = BASE_DIR + "/../../models/checkpoints/shape_predictor_68_face_landmarks.dat"
 
 FACIAL_LANDMARKS_INDEXES = OrderedDict([
     ("Mouth", (48, 68)),
