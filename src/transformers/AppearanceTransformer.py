@@ -1,12 +1,14 @@
-import sys, os
-import numpy as np
-import cv2
-from src.transformers.Transformer import Transformer
-from src.components.Aligner import Aligner
-from src.components.BoundingBox import BoundingBox
-from src.components.Scaler import Scaler
-from src.components.MaskOrientGenerator import MaskOrientGenerator
+import os
 
+import cv2
+import numpy as np
+
+from src.components.Aligner.Aligner import Aligner
+from src.components.BoundingBox.BoundingBox import BoundingBox
+from src.components.MaskOrientGenerator.MaskOrientGenerator import MaskOrientGenerator
+from src.components.Scaler.Scaler import Scaler
+from src.transformers.Transformer import Transformer
+from src.util.sender import Sender
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 

@@ -51,7 +51,7 @@ def shape_to_numpy_array(shape):
 
 
 class FaceFeature:
-    def __init__(self, model_path: str):
+    def __init__(self):
         self.facial_features_coordinates = {}
         self.detector = dlib.get_frontal_face_detector()
         self.predictor = dlib.shape_predictor(model_path)
