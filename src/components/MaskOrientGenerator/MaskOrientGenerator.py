@@ -1,7 +1,7 @@
 import numpy as np
 
-from calOrient import Orient
-from faceSegmentation import FaceSegmentation
+from src.components.MaskOrientGenerator.calOrient import Orient
+from src.components.MaskOrientGenerator.faceSegmentation import FaceSegmentation
 
 
 class MaskOrientGenerator:

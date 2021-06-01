@@ -3,9 +3,13 @@ import numpy as np
 from PIL import Image
 import torch
 from torchvision import transforms
+import os
 
 from models.MobileNetV2_unet import MobileNetV2_unet
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+face_seg_model_path = BASE_DIR + '/../../../models/checkpoints/model.pt'
 
 def write_to_txt(mask_arr: np.ndarray, mask_name: str) -> None:
     with open(f'{mask_name}.txt', 'wt') as opt_file:
@@ -29,7 +33,7 @@ class FaceSegmentation():
 
     def __init__(self):
         model = MobileNetV2_unet(None).to(torch.device("cpu"))
-        model_path = '../../../models/checkpoints/model.pt'
+        model_path = face_seg_model_path
         state_dict = torch.load(model_path, map_location="cpu")
         model.load_state_dict(state_dict)
         model.eval()

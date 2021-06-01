@@ -3,6 +3,11 @@ from collections import OrderedDict
 import cv2
 import dlib
 import numpy as np
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+model_path = BASE_DIR + "/checkpoints/shape_predictor_68_face_landmarks.dat"
 
 FACIAL_LANDMARKS_INDEXES = OrderedDict([
     ("Mouth", (48, 68)),
@@ -46,7 +51,7 @@ def shape_to_numpy_array(shape):
 
 
 class FaceFeature:
-    def __init__(self, model_path: str):
+    def __init__(self):
         self.facial_features_coordinates = {}
         self.detector = dlib.get_frontal_face_detector()
         self.predictor = dlib.shape_predictor(model_path)
