@@ -36,7 +36,7 @@ class Sender:
     def send_and_recv(self, datas: dict) -> np.ndarray:
         datas = datas
         for key, item in datas.items():
-            payload: bytes = item.tostring()
+            payload: bytes = item.tobytes()
             length: bytes = str(len(payload)).ljust(16).encode()
             print(f"sending {key} [size :{length}, shape :{item.shape} ]")
             self.client_socket.send(length)
