@@ -22,7 +22,7 @@ class BoundingBox:
         self.faceFeat = FaceFeature()
         self.image_coords = []
 
-    def get_bounding_box(self) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
+    def get_bounding_box(self):
         """
         1920 * 1080 원본 이미지에서 origin_patch 영역의 좌상단, 우상단, 좌하단, 우하단 영역을 반환합니다.
         """
