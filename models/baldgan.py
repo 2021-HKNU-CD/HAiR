@@ -57,7 +57,6 @@ class BaldGAN:
         self.model.load_weights(model_paths['G'])
 
     def go_bald(self, image: np.ndarray):
-        print(image.shape)
         input_face = np.expand_dims(image, axis=0)
         input_face = (input_face / 127.5) - 1.
         result = self.model.predict(input_face)[0]
