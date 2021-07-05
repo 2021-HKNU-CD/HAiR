@@ -1,4 +1,6 @@
 import os
+import urllib
+
 import cv2
 import keras.backend as K
 import matplotlib.pyplot as plt
@@ -23,6 +25,10 @@ model_paths = {
 
 class BaldGAN:
     def __init__(self):
+        if not os.path.isfile(model_paths['G']):
+            print("baldGAN : failed to find model, downloading...")
+            url = 'https://jinwoo17962.synology.me/datasets/baldgan/model_G_5_170.hdf5'
+            urllib.request.urlretrieve(url, model_paths['G'])
         K.set_learning_phase(0)
 
         # Image input
