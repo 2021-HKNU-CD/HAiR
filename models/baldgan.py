@@ -25,6 +25,9 @@ model_paths = {
 
 class BaldGAN:
     def __init__(self):
+        if not os.path.isdir(model_path):
+            print("baldGAN : failed to find exact folder, creating...")
+            os.mkdir(model_path)
         if not os.path.isfile(model_paths['G']):
             print("baldGAN : failed to find model, downloading...")
             url = 'https://jinwoo17962.synology.me/datasets/baldgan/model_G_5_170.hdf5'
