@@ -19,6 +19,9 @@ from src.util.capture import Capture
 
 form_class = uic.loadUiType("hair_interface.ui")[0]
 
+ref_images = next(os.walk(BASE_DIR + '/../../ref_images'), (None, None, []))[2]
+print(f"ref_images contains total of {len(ref_images)}")
+
 
 class DisplayWorker(QThread):
     finished = pyqtSignal(QPixmap)
@@ -33,16 +36,34 @@ class DisplayWorker(QThread):
         while True:
             image = capture.get()
             image = qimage2ndarray.array2qimage(image)
+            image = image.rgbSwapped()
             image = QPixmap.fromImage(image)
             self.finished.emit(image)
-            time.sleep(0.2)
+            time.sleep(0.1)
 
 
 # 화면을 띄우는데 사용되는 Class 선언
 class WindowClass(QMainWindow, form_class):
+    # reference carousel index
+    ref_index = 0
+
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+
+        # reference_image를 QPixmap으로 변환
+        self.qpixmap_ref_images = []
+        for image_path in ref_images:
+            qpixmap_var = QPixmap()
+            qpixmap_var.load(BASE_DIR + '/../../ref_images/' + image_path)
+            self.qpixmap_ref_images.append(qpixmap_var)
+
+        self.show_ref(self.qpixmap_ref_images[:5])
+
+        # reference carousel control
+        self.reference_left.setEnabled(False)
+        self.reference_left.clicked.connect(self.ref_rotate_left)
+        self.reference_right.clicked.connect(self.ref_rotate_right)
 
         # displaying 용
         self.displayWorker = DisplayWorker()
@@ -52,9 +73,33 @@ class WindowClass(QMainWindow, form_class):
         self.closeBtn.clicked.connect(self.close)
 
     @pyqtSlot(QPixmap)
-    def take_a_shot(self, image):
-        print('this is a take a shot')
+    def take_a_shot(self, image: QPixmap):
         self.cameraInput.setPixmap(image.scaledToWidth(1280))
+
+    def show_ref(self, images):
+        self.reference1.setPixmap(images[0].scaledToHeight(171))
+        self.reference2.setPixmap(images[1].scaledToHeight(171))
+        self.reference3.setPixmap(images[2].scaledToHeight(171))
+        self.reference4.setPixmap(images[3].scaledToHeight(171))
+        self.reference5.setPixmap(images[4].scaledToHeight(171))
+
+    def ref_rotate_left(self):
+        if self.ref_index != 0:
+            self.ref_index -= 1
+        if self.ref_index > 0:
+            self.reference_right.setEnabled(True)
+        else:
+            self.reference_left.setEnabled(False)
+        self.show_ref(self.qpixmap_ref_images[self.ref_index: self.ref_index + 5])
+
+    def ref_rotate_right(self):
+        if self.ref_index != len(self.qpixmap_ref_images) - 5:
+            self.ref_index += 1
+        if self.ref_index < len(self.qpixmap_ref_images) - 5:
+            self.reference_left.setEnabled(True)
+        else:
+            self.reference_right.setEnabled(False)
+        self.show_ref(self.qpixmap_ref_images[self.ref_index: self.ref_index + 5])
 
 
 if __name__ == "__main__":
@@ -62,9 +107,6 @@ if __name__ == "__main__":
     capture = Capture(0)
     myWindow = WindowClass()
     myWindow.showFullScreen()
-
-    images = next(os.walk(BASE_DIR + '/../../ref_images'), (None, None, []))[2]
-    print(f"ref_images contains total of {len(images)}")
 
     try:
         app.exec_()
