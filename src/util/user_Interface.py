@@ -65,6 +65,17 @@ class WindowClass(QMainWindow, form_class):
         self.reference_left.clicked.connect(self.ref_rotate_left)
         self.reference_right.clicked.connect(self.ref_rotate_right)
 
+        self.reference1.mousePressEvent = self.clicked_reference1
+        self.reference2.mousePressEvent = self.clicked_reference2
+        self.reference3.mousePressEvent = self.clicked_reference3
+        self.reference4.mousePressEvent = self.clicked_reference4
+        self.reference5.mousePressEvent = self.clicked_reference5
+
+        # transform image selection
+        self.radio_app.clicked.connect(self.transformTypeCheck)
+        self.radio_shape.clicked.connect(self.transformTypeCheck)
+        self.radio_struct.clicked.connect(self.transformTypeCheck)
+
         # displaying 용
         self.displayWorker = DisplayWorker()
         self.displayWorker.finished.connect(self.take_a_shot)
@@ -76,6 +87,7 @@ class WindowClass(QMainWindow, form_class):
     def take_a_shot(self, image: QPixmap):
         self.cameraInput.setPixmap(image.scaledToWidth(1280))
 
+    # reference carousel
     def show_ref(self, images):
         self.reference1.setPixmap(images[0].scaledToHeight(171))
         self.reference2.setPixmap(images[1].scaledToHeight(171))
@@ -100,6 +112,30 @@ class WindowClass(QMainWindow, form_class):
         else:
             self.reference_right.setEnabled(False)
         self.show_ref(self.qpixmap_ref_images[self.ref_index: self.ref_index + 5])
+
+    def clicked_reference1(self, event):
+        pass
+
+    def clicked_reference2(self, event):
+        pass
+
+    def clicked_reference3(self, event):
+        pass
+
+    def clicked_reference4(self, event):
+        pass
+
+    def clicked_reference5(self, event):
+        pass
+
+    # transform type
+    def transformTypeCheck(self):
+        if self.radio_app.isChecked():
+            print('apppearance')
+        elif self.radio_shape.isChecked():
+            print("shape")
+        elif self.radio_struct.isChecked():
+            print("structure")
 
 
 if __name__ == "__main__":

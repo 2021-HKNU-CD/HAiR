@@ -2651,6 +2651,58 @@
     <string>Right</string>
    </property>
   </widget>
+  <widget class="QGroupBox" name="transform_type">
+   <property name="geometry">
+    <rect>
+     <x>790</x>
+     <y>780</y>
+     <width>351</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Select type you want to fit in.</string>
+   </property>
+   <widget class="QRadioButton" name="radio_app">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>20</y>
+      <width>108</width>
+      <height>19</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Appearance</string>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="radio_struct">
+    <property name="geometry">
+     <rect>
+      <x>140</x>
+      <y>20</y>
+      <width>108</width>
+      <height>19</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Structure</string>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="radio_shape">
+    <property name="geometry">
+     <rect>
+      <x>230</x>
+      <y>20</y>
+      <width>108</width>
+      <height>19</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Shape</string>
+    </property>
+   </widget>
+  </widget>
  </widget>
  <resources/>
  <connections/>
