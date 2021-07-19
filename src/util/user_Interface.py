@@ -78,7 +78,12 @@ class WindowClass(QMainWindow, form_class):
 
         # displaying 용
         self.displayWorker = DisplayWorker()
-        self.displayWorker.finished.connect(self.take_a_shot)
+        self.displayWorker.finished.connect(self.display)
+
+        # selected reference
+        self.windowAppearance.mousePressEvent = self.clicked_appearance
+        self.windowShape.mousePressEvent = self.clicked_shape
+        self.windowStructure.mousePressEvent = self.clicked_structure
 
         # 닫기 버튼
         self.closeBtn.clicked.connect(self.close)
