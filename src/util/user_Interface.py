@@ -134,18 +134,28 @@ class WindowClass(QMainWindow, form_class):
         self.show_ref(self.qpixmap_ref_images[self.ref_index: self.ref_index + 5])
 
     def clicked_reference1(self, event):
+        self.selected_images[self.ref_mode] = self.ref_index + 0
+        self.refresh_window()
         pass
 
     def clicked_reference2(self, event):
+        self.selected_images[self.ref_mode] = self.ref_index + 1
+        self.refresh_window()
         pass
 
     def clicked_reference3(self, event):
+        self.selected_images[self.ref_mode] = self.ref_index + 2
+        self.refresh_window()
         pass
 
     def clicked_reference4(self, event):
+        self.selected_images[self.ref_mode] = self.ref_index + 3
+        self.refresh_window()
         pass
 
     def clicked_reference5(self, event):
+        self.selected_images[self.ref_mode] = self.ref_index + 4
+        self.refresh_window()
         pass
 
     # transform type
