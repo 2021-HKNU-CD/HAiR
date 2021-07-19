@@ -84,7 +84,7 @@ class WindowClass(QMainWindow, form_class):
         self.closeBtn.clicked.connect(self.close)
 
     @pyqtSlot(QPixmap)
-    def take_a_shot(self, image: QPixmap):
+    def display(self, image: QPixmap):
         self.cameraInput.setPixmap(image.scaledToWidth(1280))
 
     # reference carousel
