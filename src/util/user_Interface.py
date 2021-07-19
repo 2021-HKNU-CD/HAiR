@@ -46,6 +46,12 @@ class DisplayWorker(QThread):
 class WindowClass(QMainWindow, form_class):
     # reference carousel index
     ref_index = 0
+    ref_mode = 'Appearance'
+    selected_images = {
+        'Appearance': -1,
+        'Shape': -1,
+        'Structure': -1
+    }
 
     def __init__(self):
         super().__init__()
@@ -58,6 +64,15 @@ class WindowClass(QMainWindow, form_class):
             qpixmap_var.load(BASE_DIR + '/../../ref_images/' + image_path)
             self.qpixmap_ref_images.append(qpixmap_var)
 
+        # not selected image
+        qp = QPixmap()
+        qp.load(BASE_DIR + '/image_not_selected.png')
+        self.qpixmap_ref_images.append(qp)
+
+        # refresh selected reference
+        self.refresh_window()
+
+        # refresh carousel
         self.show_ref(self.qpixmap_ref_images[:5])
 
         # reference carousel control
@@ -110,9 +125,9 @@ class WindowClass(QMainWindow, form_class):
         self.show_ref(self.qpixmap_ref_images[self.ref_index: self.ref_index + 5])
 
     def ref_rotate_right(self):
-        if self.ref_index != len(self.qpixmap_ref_images) - 5:
+        if self.ref_index != len(self.qpixmap_ref_images) - 6:
             self.ref_index += 1
-        if self.ref_index < len(self.qpixmap_ref_images) - 5:
+        if self.ref_index < len(self.qpixmap_ref_images) - 6:
             self.reference_left.setEnabled(True)
         else:
             self.reference_right.setEnabled(False)
@@ -136,11 +151,31 @@ class WindowClass(QMainWindow, form_class):
     # transform type
     def transformTypeCheck(self):
         if self.radio_app.isChecked():
-            print('apppearance')
+            self.ref_mode = "Appearance"
+
         elif self.radio_shape.isChecked():
-            print("shape")
+            self.ref_mode = "Shape"
+
         elif self.radio_struct.isChecked():
-            print("structure")
+            self.ref_mode = "Structure"
+
+    # reference windows
+    def refresh_window(self):
+        self.windowAppearance.setPixmap(self.qpixmap_ref_images[self.selected_images["Appearance"]].scaledToWidth(370))
+        self.windowStructure.setPixmap(self.qpixmap_ref_images[self.selected_images["Structure"]].scaledToWidth(370))
+        self.windowShape.setPixmap(self.qpixmap_ref_images[self.selected_images["Shape"]].scaledToWidth(370))
+
+    def clicked_appearance(self, event):
+        self.selected_images["Appearance"] = -1
+        self.refresh_window()
+
+    def clicked_shape(self, event):
+        self.selected_images["Shape"] = -1
+        self.refresh_window()
+
+    def clicked_structure(self, event):
+        self.selected_images["Structure"] = -1
+        self.refresh_window()
 
 
 if __name__ == "__main__":
