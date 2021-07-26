@@ -1,6 +1,7 @@
 import time
 
 import cv2
+import numpy as np
 import qimage2ndarray
 
 import sys
@@ -11,12 +12,14 @@ from PyQt5.QtWidgets import *
 from PyQt5 import uic
 import os
 
+from src.transformers.AppearanceTransformer import AppearanceTransformer
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+from src.util.capture import Capture
 
 # UI파일 연결
 # 단, UI파일은 Python 코드 파일과 같은 디렉토리에 위치해야한다.
-from src.util.capture import Capture
-
 form_class = uic.loadUiType("hair_interface.ui")[0]
 
 ref_images = next(os.walk(BASE_DIR + '/../../ref_images'), (None, None, []))[2]
@@ -30,15 +33,18 @@ class DisplayWorker(QThread):
         super(DisplayWorker, self).__init__()
         self.setTerminationEnabled(True)
         self.start()
+        self.T = AppearanceTransformer()
         print("display worker is on")
 
     def run(self):
+        time.sleep(1)
         while True:
-            image = capture.get()
-            image = qimage2ndarray.array2qimage(image)
-            image = image.rgbSwapped()
-            image = QPixmap.fromImage(image)
-            self.finished.emit(image)
+            image: np.ndarray = capture.get()
+            t_image = self.T.transform(image)
+            qimage = qimage2ndarray.array2qimage(t_image)
+            qimage = qimage.rgbSwapped()
+            qimage = QPixmap.fromImage(qimage)
+            self.finished.emit(qimage)
             time.sleep(0.1)
 
 

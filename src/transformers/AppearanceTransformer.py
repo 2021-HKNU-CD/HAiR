@@ -17,6 +17,7 @@ class AppearanceTransformer(Transformer):
     def __init__(self):
         self.ref_image = 'a.jpg'
         self.sender = Sender()
+        self.MOG = MaskOrientGenerator()
 
     def set_reference(self):
         pass
@@ -24,12 +25,17 @@ class AppearanceTransformer(Transformer):
     def transform(self, original_image: np.ndarray) -> np.ndarray:
         # original_image : 1920 x 1080
         # return : 1920 x 1080
-        ref_image = cv2.imread(BASE_DIR + '/../../iu1.jpg')
+        ref_image = cv2.imread(BASE_DIR + '/../../ref_images/iu.jpg')
 
         bounding_box_src = BoundingBox(original_image)
         bounding_box_ref = BoundingBox(ref_image)
+        try:
+            aligner_src = Aligner(bounding_box_src)
 
-        aligner_src = Aligner(bounding_box_src)
+        except Exception:
+            print("Face not found")
+            return original_image
+
         aligner_ref = Aligner(bounding_box_ref)
 
         aligned_face_patch_src = aligner_src.align_forward()
@@ -38,14 +44,13 @@ class AppearanceTransformer(Transformer):
         aligned_face_patch_ref = aligner_ref.align_forward()
         ref_scaler = Scaler(aligned_face_patch_ref)
 
-        mask_orient = MaskOrientGenerator()
         scaled_src = src_scaler.scale_forward()
-        mask, orient = mask_orient.generate(scaled_src)
+        mask, orient = self.MOG.generate(scaled_src)
 
         scaled_ref = ref_scaler.scale_forward()
-        mask_ref, orient_ref = mask_orient.generate(scaled_ref)
+        mask_ref, orient_ref = self.MOG.generate(scaled_ref)
 
-        orient_mask = mask_orient.generate_mask(scaled_ref)
+        orient_mask = self.MOG.generate_mask(scaled_ref)
 
         generated_image: np.ndarray = self.sender.send_and_recv(datas={
             'label_ref': mask_ref,
@@ -59,4 +64,6 @@ class AppearanceTransformer(Transformer):
 
         generated_image = src_scaler.scale_backward(generated_image)
         generated_image = aligner_src.align_backward(generated_image)
-        return bounding_box_src.set_origin_patch(generated_image)
+        finished_image = bounding_box_src.set_origin_patch(generated_image)
+        print('completed')
+        return finished_image
