@@ -15,17 +15,19 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class AppearanceTransformer(Transformer):
     def __init__(self):
-        self.ref_image = 'a.jpg'
+        self.ref_image: np.ndarray = None
         self.sender = Sender()
         self.MOG = MaskOrientGenerator()
 
-    def set_reference(self):
-        pass
+    def set_reference(self, reference: np.ndarray) -> None:
+        self.ref_image = reference
 
     def transform(self, original_image: np.ndarray) -> np.ndarray:
         # original_image : 1920 x 1080
         # return : 1920 x 1080
-        ref_image = cv2.imread(BASE_DIR + '/../../ref_images/iu.jpg')
+        if self.ref_image is None:
+            return original_image
+        ref_image = self.ref_image.copy()
 
         bounding_box_src = BoundingBox(original_image)
         bounding_box_ref = BoundingBox(ref_image)

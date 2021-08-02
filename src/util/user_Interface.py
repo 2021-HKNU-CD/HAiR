@@ -25,6 +25,15 @@ form_class = uic.loadUiType("hair_interface.ui")[0]
 ref_images = next(os.walk(BASE_DIR + '/../../ref_images'), (None, None, []))[2]
 print(f"ref_images contains total of {len(ref_images)}")
 
+np_ref_images = []
+for ref in ref_images:
+    np_ref_images.append(cv2.imread(BASE_DIR + '/../../ref_images/' + ref))
+
+Transformer = {
+    'Appearance': AppearanceTransformer(),
+    'ShapeStructure': ShapeStructureTransformer()
+}
+
 
 class DisplayWorker(QThread):
     finished = pyqtSignal(QPixmap)
@@ -33,14 +42,13 @@ class DisplayWorker(QThread):
         super(DisplayWorker, self).__init__()
         self.setTerminationEnabled(True)
         self.start()
-        self.T = AppearanceTransformer()
         print("display worker is on")
 
     def run(self):
         time.sleep(1)
         while True:
             image: np.ndarray = capture.get()
-            t_image = self.T.transform(image)
+            t_image = Transformer['Appearance'].transform(image)
             qimage = qimage2ndarray.array2qimage(t_image)
             qimage = qimage.rgbSwapped()
             qimage = QPixmap.fromImage(qimage)
@@ -178,20 +186,25 @@ class WindowClass(QMainWindow, form_class):
     # reference windows
     def refresh_window(self):
         self.windowAppearance.setPixmap(self.qpixmap_ref_images[self.selected_images["Appearance"]].scaledToWidth(370))
+        if self.selected_images["Appearance"] != -1:
+            Transformer["Appearance"].set_reference(np_ref_images[self.selected_images["Appearance"]])
         self.windowStructure.setPixmap(self.qpixmap_ref_images[self.selected_images["Structure"]].scaledToWidth(370))
         self.windowShape.setPixmap(self.qpixmap_ref_images[self.selected_images["Shape"]].scaledToWidth(370))
 
     def clicked_appearance(self, event):
         self.selected_images["Appearance"] = -1
         self.refresh_window()
+        Transformer['Appearance'].set_reference(None)
 
     def clicked_shape(self, event):
         self.selected_images["Shape"] = -1
         self.refresh_window()
+        Transformer['ShapeStructure'].set_reference(None)
 
     def clicked_structure(self, event):
         self.selected_images["Structure"] = -1
         self.refresh_window()
+        Transformer['ShapeStructure'].set_reference(None)
 
 
 if __name__ == "__main__":

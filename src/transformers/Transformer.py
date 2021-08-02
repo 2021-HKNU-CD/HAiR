@@ -3,7 +3,7 @@ import numpy as np
 
 class Transformer(metaclass=ABCMeta):
     @abstractmethod
-    def set_reference(self):
+    def set_reference(self, reference: np.ndarray):
         pass
     
     @abstractmethod
