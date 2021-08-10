@@ -16,7 +16,10 @@ def recvall(sock: socket, count: int) -> bytes:
 
 class Sender:
     def __init__(self):
-        self.client_socket: socket = socket.socket(
+        self.client_socket: socket
+
+    def send_and_recv(self, datas: dict) -> np.ndarray:
+        self.client_socket = socket.socket(
             family=socket.AF_INET,
             type=socket.SOCK_STREAM
         )
@@ -25,15 +28,7 @@ class Sender:
             socket.SO_REUSEADDR,
             1
         )
-        self.client_socket.connect(
-            (
-                '127.0.0.1',
-                8080
-            )
-        )
-        print('connected to 127.0.0.1:8080')
-
-    def send_and_recv(self, datas: dict) -> np.ndarray:
+        self.client_socket.connect(('127.0.0.1', 8080))
         datas = datas
         for key, item in datas.items():
             payload: bytes = item.tobytes()
@@ -44,6 +39,8 @@ class Sender:
 
         gen_length = recvall(self.client_socket, 16).decode()
         gen_payload = recvall(self.client_socket, int(gen_length))
+        self.client_socket.close()
+        self.client_socket = None
 
         buffered_data = np.frombuffer(gen_payload, dtype="uint8")
         return np.resize(buffered_data, (512, 512, 3))
