@@ -29,12 +29,7 @@ np_ref_images = []
 for ref in ref_images:
     np_ref_images.append(cv2.imread(BASE_DIR + '/../../ref_images/' + ref))
 
-Transformer = {
-    'Appearance': AppearanceTransformer(),
-    'ShapeStructure': ShapeStructureTransformer()
-}
-
-
+T = Transformer()
 class DisplayWorker(QThread):
     finished = pyqtSignal(QPixmap)
 
@@ -48,7 +43,7 @@ class DisplayWorker(QThread):
         time.sleep(1)
         while True:
             image: np.ndarray = capture.get()
-            t_image = Transformer['Appearance'].transform(image)
+            t_image = T.transform(image)
             qimage = qimage2ndarray.array2qimage(t_image)
             qimage = qimage.rgbSwapped()
             qimage = QPixmap.fromImage(qimage)
@@ -186,10 +181,14 @@ class WindowClass(QMainWindow, form_class):
     # reference windows
     def refresh_window(self):
         self.windowAppearance.setPixmap(self.qpixmap_ref_images[self.selected_images["Appearance"]].scaledToWidth(370))
-        if self.selected_images["Appearance"] != -1:
-            Transformer["Appearance"].set_reference(np_ref_images[self.selected_images["Appearance"]])
         self.windowStructure.setPixmap(self.qpixmap_ref_images[self.selected_images["Structure"]].scaledToWidth(370))
         self.windowShape.setPixmap(self.qpixmap_ref_images[self.selected_images["Shape"]].scaledToWidth(370))
+        if self.selected_images["Appearance"] != -1:
+            T.set_appearance_ref(np_ref_images[self.selected_images["Appearance"]])
+        if self.selected_images["Structure"] != -1:
+            T.set_structure_ref(np_ref_images[self.selected_images["Structure"]])
+        if self.selected_images["Shape"] != -1:
+            T.set_shape_ref(np_ref_images[self.selected_images["Shape"]])
 
     def clicked_appearance(self, event):
         self.selected_images["Appearance"] = -1
