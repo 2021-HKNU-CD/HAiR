@@ -5,9 +5,8 @@ from src.components.MaskOrientGenerator.faceSegmentation import FaceSegmentation
 
 
 class MaskOrientGenerator:
-    def __init__(self):
-        self.faceSegmentation = FaceSegmentation()
-        self.orient = Orient()
+    faceSegmentation = FaceSegmentation()
+    orient = Orient()
 
     def generate(self, aligned_scaled_patch: np.ndarray) -> tuple:
         '''
@@ -26,7 +25,7 @@ class MaskOrientGenerator:
         param image : 원본 이미지
         return : image의 마스크
         '''
-        return self.faceSegmentation.image_to_mask(image, 256, 512)
+        return MaskOrientGenerator.faceSegmentation.image_to_mask(image, 256, 512)
 
     def generate_orient(self, image: np.ndarray, mask: np.ndarray) -> np.ndarray:
         '''
@@ -35,4 +34,4 @@ class MaskOrientGenerator:
               mask  : 원본 이미지의 마스크
         return : image의 orient dense
         '''
-        return self.orient.makeOrient(image, mask)
+        return MaskOrientGenerator.orient.makeOrient(image, mask)

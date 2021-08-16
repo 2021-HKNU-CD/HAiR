@@ -1,16 +1,17 @@
 import numpy as np
 
-import cv2
-
-from models.baldgan import BaldGAN
-from src.components.Aligner.AlignerWing import AlignerWing
-from src.components.BoundingBox.BoundingBox import BoundingBox
 from src.components.MaskOrientGenerator.MaskOrientGenerator import MaskOrientGenerator
 from src.components.Scaler.Scaler import Scaler
 from src.util.sender import Sender
 
 class Transformer:
-    def __init__(self):
+    ref_cache = {}
+    def __init__(self, boundingBoxFactory, alignerFactory, balderFactory, caching=True):
+        self.caching = caching
+
+        self.boundingBoxFactory = boundingBoxFactory
+        self.alignerFactory = alignerFactory
+        self.balderFactory = balderFactory
 
         self.appearance_ref = None
         self.shape_ref = None
@@ -32,21 +33,22 @@ class Transformer:
         # original_image : 1920 x 1080
         # return : 1920 x 1080
 
-        boundingBox = BoundingBox(original_image)
-        aligner = AlignerWing(boundingBox)
+        boundingBox = self.boundingBoxFactory(original_image)
+        aligner = self.alignerFactory(boundingBox)
 
-        balder = Balder(BaldGAN())
+        balder = self.balderFactory()
+
         src = self._src_preprocess(aligner, balder)
 
         appearance_ref, shape_ref, structure_ref = None, None, None
         if self.appearance_ref is not None:
-            appearance_ref = self._ref_preprocess(AlignerWing(BoundingBox(self.appearance_ref)))
+            appearance_ref = self._ref_preprocess(self.appearance_ref)
 
         if self.shape_ref is not None:
-            shape_ref = self._ref_preprocess(AlignerWing(BoundingBox(self.shape_ref)))
+            shape_ref = self._ref_preprocess(self.shape_ref)
 
         if self.structure_ref is not None:
-            structure_ref = self._ref_preprocess(AlignerWing(BoundingBox(self.structure_ref)))
+            structure_ref = self._ref_preprocess(self.structure_ref)
 
         # Appearance
         appearance_mask = src['mask'] if appearance_ref is None else appearance_ref['mask']
@@ -79,14 +81,26 @@ class Transformer:
         generated = aligner.align_backward(generated)
         return boundingBox.set_origin_patch(generated)
 
-    def _ref_preprocess(self, aligner):
+    def _ref_preprocess(self, ref_img):
+        if self.caching:
+            key = str(ref_img)
+            if key in Transformer.ref_cache.keys():
+                print('ref cache hit')
+                return Transformer.ref_cache[key]
+
+        aligner = self.alignerFactory(self.boundingBoxFactory(ref_img))
+
         scaled_ref = Scaler((aligner.align_forward())).scale_forward()
         mask_ref, orient_ref = self.MOGenerator.generate(scaled_ref)
+
         ret = {
             'img': scaled_ref,
             'mask': mask_ref,
             'orient': orient_ref
         }
+
+        if self.caching:
+            Transformer.ref_cache[key] = ret
         return ret
 
     def _src_preprocess(self, aligner, bald):
@@ -106,73 +120,9 @@ class Transformer:
         }
         return ret
 
-class Balder:
-    def __init__(self, baldGAN):
-        self.baldGAN = baldGAN
-        self.scaler = None
-
-    def run(self, aligned_face_patch_src):
-        self.scaler = Scaler(aligned_face_patch_src, target_size=256)
-        scaled_256_src = self.scaler.scale_forward()
-        self.scaler = Scaler(self.baldGAN.go_bald(scaled_256_src))
-        return self.scaler.scale_forward()
-
-class NoBalder:
-    def __init__(self):
-        self.scaler = None
-
-    def run(self, aligned_face_patch_src):
-        self.scaler = Scaler(aligned_face_patch_src)
-        return self.scaler.scale_forward()
+from src.transformers.ComponentFactory import *
 
 def getTransformer() -> Transformer:
-    return Transformer()
-
-def test():
-    import os
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-    transformer = getTransformer()
-
-    appearance_refs = {
-        'none' : None,
-        'lee' : cv2.imread('{}/../../data/{}.jpg'.format(BASE_DIR, 'lee'))
-    }
-
-    structure_refs = {
-        'none' : None,
-        '10' : cv2.imread('{}/../../data/{}.jpg'.format(BASE_DIR, '10')),
-        'kim': cv2.imread('{}/../../data/{}.jpg'.format(BASE_DIR, 'kim'))
-    }
-
-    shape_refs = {
-        'none' : None,
-        '10': cv2.imread('{}/../../data/{}.jpg'.format(BASE_DIR, '10')),
-        'kim' : cv2.imread('{}/../../data/{}.jpg'.format(BASE_DIR, 'kim'))
-    }
-
-    for img_idx in [2]:
-        src = cv2.imread('{}/../../data/{}.jpg'.format(BASE_DIR, img_idx))
-        for a_key in appearance_refs.keys():
-            appearance_ref = appearance_refs[a_key]
-
-            for st_key in structure_refs.keys():
-                structure_ref = structure_refs[st_key]
-
-                for sh_key in shape_refs.keys():
-                    shape_ref = shape_refs[sh_key]
-
-                    file = 'results/{}_{}_{}_{}.jpg'.format(img_idx, a_key, st_key, sh_key)
-                    print(file, 'started')
-
-                    transformer.set_appearance_ref(appearance_ref)
-                    transformer.set_shape_ref(shape_ref)
-                    transformer.set_structure_ref(structure_ref)
-
-                    try:
-                        result = transformer.transform(src)
-                        cv2.imwrite(file, result)
-                    except:
-                        print('error')
-
-# test()
+    return Transformer(boundingBoxFactory=BoundingBoxFactory,
+                       alignerFactory=AlignerWingFactory,
+                       balderFactory=BalderFactory)
