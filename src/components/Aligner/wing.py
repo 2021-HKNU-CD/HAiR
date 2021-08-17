@@ -288,28 +288,38 @@ def np2tensor(image):
 
 
 class FaceAligner():
+    device = None
+    fan = None
+    CELEB_REF = None
+    xaxis_ref = None
+
     def __init__(self, fname_wing, fname_celeba_mean, output_size):
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.fan = FAN(fname_pretrained=fname_wing).to(self.device).eval()
         scale = output_size // 256
-        self.CELEB_REF = np.float32(np.load(fname_celeba_mean)['mean']) * scale
-        self.xaxis_ref = landmarks2xaxis(self.CELEB_REF)
         self.output_size = output_size
 
-        self.transform_inv = None
-        self.origin_landmarks = None
+        if FaceAligner.device is None:
+            FaceAligner.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        if FaceAligner.fan is None:
+            FaceAligner.fan = FAN(fname_pretrained=fname_wing).to(FaceAligner.device).eval()
+
+        if FaceAligner.CELEB_REF is None:
+            FaceAligner.CELEB_REF = np.float32(np.load(fname_celeba_mean)['mean']) * scale
+
+        if FaceAligner.xaxis_ref is None:
+            FaceAligner.xaxis_ref = landmarks2xaxis(FaceAligner.CELEB_REF)
+
 
     def align(self, imgs, output_size=256):
         ''' imgs = torch.CUDATensor of BCHW '''
-        imgs = imgs.to(self.device)
-        landmarkss = self.fan.get_landmark(imgs).cpu().numpy()
+        imgs = imgs.to(FaceAligner.device)
+        landmarkss = FaceAligner.fan.get_landmark(imgs).cpu().numpy()
         for i, (img, landmarks) in enumerate(zip(imgs, landmarkss)):
-            self.origin_landmarks = landmarks
 
             img_np = tensor2numpy255(img)
             img_np, landmarks = pad_mirror(img_np, landmarks)
 
-            transform = self.landmarks2mat(landmarks)
+            transform = self.landmarks2mat(landmarks, FaceAligner.CELEB_REF)
 
             rows, cols, _ = img_np.shape
             rows = max(rows, self.output_size)
@@ -317,19 +327,19 @@ class FaceAligner():
             aligned = cv2.warpPerspective(img_np, transform, (cols, rows), flags=cv2.INTER_LANCZOS4)
 
             imgs[i] = np2tensor(aligned[:self.output_size, :self.output_size, :])
-        return imgs
+        return imgs, landmarks
 
-    def align_backward(self, imgs, output_size=256):
+    def align_backward(self, imgs, origin_landmarks, output_size=256):
         ''' imgs = torch.CUDATensor of BCHW '''
-        imgs = imgs.to(self.device)
+        imgs = imgs.to(FaceAligner.device)
 
         ret = None
-        landmarkss = self.fan.get_landmark(imgs).cpu().numpy()
+        landmarkss = FaceAligner.fan.get_landmark(imgs).cpu().numpy()
         for i, (img, landmarks) in enumerate(zip(imgs, landmarkss)):
             img_np = tensor2numpy255(img)
             img_np, landmarks = pad_mirror(img_np, landmarks)
 
-            transform = self.landmarks2backMat(landmarks)
+            transform = self.landmarks2mat(landmarks, origin_landmarks)
 
             rows, cols, _ = img_np.shape
             rows = max(rows, self.output_size)
@@ -339,24 +349,12 @@ class FaceAligner():
             ret = torch.FloatTensor(aligned[:, :, :]).permute(2, 0, 1) / 255 * 2 - 1
         return ret
 
-    def landmarks2mat(self, landmarks):
-        T_origin = points2T(landmarks, 'from')
-        xaxis_src = landmarks2xaxis(landmarks)
-        R = vecs2R(xaxis_src, self.xaxis_ref)
-        S = landmarks2S(landmarks, self.CELEB_REF)
-        T_ref = points2T(self.CELEB_REF, 'to')
-        matrix = np.dot(T_ref, np.dot(S, np.dot(R, T_origin)))
-        return matrix
-
-    def landmarks2backMat(self, landmarks):
-        if self.origin_landmarks is None:
-            raise Exception("self.origin_landmarks가 없습니다.\nAlign forward를 먼저 실행하고 backward를 호출해 주세요.")
-
-        T_origin = points2T(landmarks, 'from')
-        xaxis_src = landmarks2xaxis(landmarks)
-        R = vecs2R(xaxis_src, landmarks2xaxis(self.origin_landmarks))
-        S = landmarks2S(landmarks, self.origin_landmarks)
-        T_ref = points2T(self.origin_landmarks, 'to')
+    def landmarks2mat(self, from_landmarks, to_landmarks):
+        T_origin = points2T(from_landmarks, 'from')
+        xaxis_src = landmarks2xaxis(from_landmarks)
+        R = vecs2R(xaxis_src, landmarks2xaxis(to_landmarks))
+        S = landmarks2S(from_landmarks, to_landmarks)
+        T_ref = points2T(to_landmarks, 'to')
         matrix = np.dot(T_ref, np.dot(S, np.dot(R, T_origin)))
         return matrix
 
@@ -463,12 +461,12 @@ def align_face(img_size, image, Aligner):
 
     # PIL Image -> tensor
     x = transform(image).unsqueeze(0)
-    x_aligned = Aligner.align(x)
+    x_aligned, origin_landmarks = Aligner.align(x)
 
     # return : tensor, FaceAligner
-    return x_aligned
+    return x_aligned, origin_landmarks
 
-def align_face_restore(img_size, image, Aligner):
+def align_face_restore(img_size, image, origin_landmarks, Aligner):
     # image : ndarray
     from torchvision import transforms
     from PIL import Image
@@ -484,7 +482,7 @@ def align_face_restore(img_size, image, Aligner):
 
     # PIL Image -> tensor
     x = transform(image).unsqueeze(0)
-    x_aligned = Aligner.align_backward(x)
+    x_aligned = Aligner.align_backward(x, origin_landmarks)
 
     # return : tensor
     return x_aligned
