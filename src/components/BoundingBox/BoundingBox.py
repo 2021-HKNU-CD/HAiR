@@ -32,8 +32,12 @@ class BoundingBox:
         # 왼쪽눈, 오른쪽눈, 입의 위치 파악
         try:
             left_eye, right_eye, mouth = self.faceFeat.get(self.original_image)
-        except Exception("not a single face is present in image"):
-            raise ValueError('NoFaceError')
+        except Exception as e:
+            if e.args[0] == "not a single face is present in image":
+                raise ValueError('NoFaceError')
+
+
+        image_size = (len(self.original_image[0]), len(self.original_image))
 
         # 얼굴의 중심
         self.face_center = (sum((left_eye[0], right_eye[0], mouth[0])) // 3,
@@ -78,16 +82,15 @@ class BoundingBox:
         # right_lower 얼굴의 오른쪽 아래
         right_lower = (int(bottom[0] + (self.margin * math.cos(m))),
                        int(bottom[1] + (self.margin * math.sin(m))))
+        for y, x in [left_upper, left_lower, right_upper, right_lower]:
+            if not 0 <= y < image_size[0] or not 0 <= x <= image_size[1]:
+                raise ValueError("BoundingBoxOffLimitError")
 
         # original_patch 의 꼭짓점 반환
         min_xy = (min([x for x in [left_upper[0], left_lower[0], right_upper[0], right_lower[0]]]),
                   min([x for x in [left_upper[1], left_lower[1], right_upper[1], right_lower[1]]]))
         max_xy = (max([x for x in [left_upper[0], left_lower[0], right_upper[0], right_lower[0]]]),
                   max([x for x in [left_upper[1], left_lower[1], right_upper[1], right_lower[1]]]))
-
-        if not 0 <= min_xy[0] < len(self.original_image[0]) or 0 <= min_xy[1] < len(self.original_image) \
-                or 0 <= max_xy[0] < len(self.original_image[0]) or 0 <= max_xy[1] < len(self.original_image):
-            raise ValueError("BoundingBoxOffLimitError")
 
         # 각 꼭짓점 정의
         left_top = min_xy
