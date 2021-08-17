@@ -34,7 +34,12 @@ class Transformer:
         # return : 1920 x 1080
 
         boundingBox = self.boundingBoxFactory(original_image)
-        aligner = self.alignerFactory(boundingBox)
+
+        try:
+            aligner = self.alignerFactory(boundingBox)
+        except Exception as e:
+            print(e)
+            return original_image
 
         balder = self.balderFactory()
 

@@ -79,8 +79,8 @@ def test(src_files=[], appearance_ref_files=[], ss_ref_files=[], tVariant=True, 
                     if not os.path.isdir(result_dir):
                         os.mkdir(result_dir)
                     cv2.imwrite(file, result)
-                except:
-                    print('error')
+                except Exception as e:
+                    print(e)
 
     print('total time :', time.time() - start)
 
