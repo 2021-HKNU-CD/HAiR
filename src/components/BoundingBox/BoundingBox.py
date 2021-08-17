@@ -9,7 +9,7 @@ class BoundingBox:
     origin_image로 부터 눈, 코, 입 좌표를 추출하고
     얼굴 중심을 구한 뒤 회전각을 구하고 Margin을 구해서 origin_image에서 bounding box를 구합니다.
     """
-
+    faceFeat = FaceFeature()
     def __init__(self, original_image: np.ndarray):
         '''
         param original_image : 1920 * 1080 크기의 카메라로 들어온 입력 이미지
@@ -19,7 +19,6 @@ class BoundingBox:
         self.rotation = None
         self.theta = None
         self.face_center = None
-        self.faceFeat = FaceFeature()
         self.image_coords = []
 
     def get_bounding_box(self):
@@ -30,7 +29,7 @@ class BoundingBox:
         # BoundingBox = 얼굴 중심 ~ Margin*(sin(회전각) + cos(회전각))
 
         # 왼쪽눈, 오른쪽눈, 입의 위치 파악
-        left_eye, right_eye, mouth = self.faceFeat.get(self.original_image)
+        left_eye, right_eye, mouth = BoundingBox.faceFeat.get(self.original_image)
 
         # 얼굴의 중심
         self.face_center = (sum((left_eye[0], right_eye[0], mouth[0])) // 3,
