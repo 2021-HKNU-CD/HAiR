@@ -30,6 +30,7 @@ def test(src_files=[], appearance_ref_files=[], ss_ref_files=[], tVariant=True, 
 
     # 조합별 Transformer
     transformers = {'wing_based_eye_distance_based_model_G_5_170': getTransformer()}
+    transformers['wing_based_eye_distance_based_model_G_5_170'].pass_through = False
 
     if tVariant:
         for a_key, bb_key, bd_key in product(alignerFactories.keys(),

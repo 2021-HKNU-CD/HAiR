@@ -6,8 +6,9 @@ from src.util.sender import Sender
 
 class Transformer:
     ref_cache = {}
-    def __init__(self, boundingBoxFactory, alignerFactory, balderFactory, caching=True):
+    def __init__(self, boundingBoxFactory, alignerFactory, balderFactory, caching=True, pass_through=False):
         self.caching = caching
+        self.pass_through = pass_through
 
         self.boundingBoxFactory = boundingBoxFactory
         self.alignerFactory = alignerFactory
@@ -32,6 +33,10 @@ class Transformer:
     def transform(self, original_image: np.ndarray) -> np.ndarray:
         # original_image : 1920 x 1080
         # return : 1920 x 1080
+
+        if self.pass_through:
+            if self.appearance_ref is None and self.shape_ref is None and self.structure_ref is None:
+                return original_image
 
         boundingBox = self.boundingBoxFactory(original_image)
 
@@ -130,4 +135,5 @@ from src.transformers.ComponentFactory import *
 def getTransformer() -> Transformer:
     return Transformer(boundingBoxFactory=BoundingBoxFactory,
                        alignerFactory=AlignerWingFactory,
-                       balderFactory=BalderFactory)
+                       balderFactory=BalderFactory,
+                       pass_through=True)
