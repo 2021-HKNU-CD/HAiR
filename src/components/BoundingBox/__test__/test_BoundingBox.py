@@ -36,7 +36,5 @@ class TestBoundingBox(unittest.TestCase):
             bb.get_bounding_box()
 
 
-
-
 if __name__ == '__main__':
     unittest.main()
