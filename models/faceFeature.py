@@ -1,9 +1,9 @@
+import os
 from collections import OrderedDict
 
 import cv2
 import dlib
 import numpy as np
-import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -71,5 +71,4 @@ class FaceFeature:
             return left, right, mouth
         else:
             # if not a single face is present in image
-            raise Exception("face was not in an image")
-
+            raise Exception("not a single face is present in image")

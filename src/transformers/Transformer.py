@@ -1,16 +1,18 @@
 import numpy as np
 
-import cv2
-
-from models.baldgan import BaldGAN
-from src.components.Aligner.AlignerWing import AlignerWing
-from src.components.BoundingBox.BoundingBox import BoundingBox
 from src.components.MaskOrientGenerator.MaskOrientGenerator import MaskOrientGenerator
 from src.components.Scaler.Scaler import Scaler
 from src.util.sender import Sender
 
 class Transformer:
-    def __init__(self):
+    ref_cache = {}
+    def __init__(self, boundingBoxFactory, alignerFactory, balderFactory, caching=True, pass_through=False):
+        self.caching = caching
+        self.pass_through = pass_through
+
+        self.boundingBoxFactory = boundingBoxFactory
+        self.alignerFactory = alignerFactory
+        self.balderFactory = balderFactory
 
         self.appearance_ref = None
         self.shape_ref = None
@@ -32,21 +34,31 @@ class Transformer:
         # original_image : 1920 x 1080
         # return : 1920 x 1080
 
-        boundingBox = BoundingBox(original_image)
-        aligner = AlignerWing(boundingBox)
+        if self.pass_through:
+            if self.appearance_ref is None and self.shape_ref is None and self.structure_ref is None:
+                return original_image
 
-        balder = Balder(BaldGAN())
+        boundingBox = self.boundingBoxFactory(original_image)
+
+        try:
+            aligner = self.alignerFactory(boundingBox)
+        except Exception as e:
+            print(e)
+            return original_image
+
+        balder = self.balderFactory()
+
         src = self._src_preprocess(aligner, balder)
 
         appearance_ref, shape_ref, structure_ref = None, None, None
         if self.appearance_ref is not None:
-            appearance_ref = self._ref_preprocess(AlignerWing(BoundingBox(self.appearance_ref)))
+            appearance_ref = self._ref_preprocess(self.appearance_ref)
 
         if self.shape_ref is not None:
-            shape_ref = self._ref_preprocess(AlignerWing(BoundingBox(self.shape_ref)))
+            shape_ref = self._ref_preprocess(self.shape_ref)
 
         if self.structure_ref is not None:
-            structure_ref = self._ref_preprocess(AlignerWing(BoundingBox(self.structure_ref)))
+            structure_ref = self._ref_preprocess(self.structure_ref)
 
         # Appearance
         appearance_mask = src['mask'] if appearance_ref is None else appearance_ref['mask']
@@ -79,14 +91,26 @@ class Transformer:
         generated = aligner.align_backward(generated)
         return boundingBox.set_origin_patch(generated)
 
-    def _ref_preprocess(self, aligner):
+    def _ref_preprocess(self, ref_img):
+        if self.caching:
+            key = str(ref_img)
+            if key in Transformer.ref_cache.keys():
+                print('ref cache hit')
+                return Transformer.ref_cache[key]
+
+        aligner = self.alignerFactory(self.boundingBoxFactory(ref_img))
+
         scaled_ref = Scaler((aligner.align_forward())).scale_forward()
         mask_ref, orient_ref = self.MOGenerator.generate(scaled_ref)
+
         ret = {
             'img': scaled_ref,
             'mask': mask_ref,
             'orient': orient_ref
         }
+
+        if self.caching:
+            Transformer.ref_cache[key] = ret
         return ret
 
     def _src_preprocess(self, aligner, bald):
@@ -106,25 +130,10 @@ class Transformer:
         }
         return ret
 
-class Balder:
-    def __init__(self, baldGAN):
-        self.baldGAN = baldGAN
-        self.scaler = None
-
-    def run(self, aligned_face_patch_src):
-        self.scaler = Scaler(aligned_face_patch_src, target_size=256)
-        scaled_256_src = self.scaler.scale_forward()
-        self.scaler = Scaler(self.baldGAN.go_bald(scaled_256_src))
-        return self.scaler.scale_forward()
-
-class NoBalder:
-    def __init__(self):
-        self.scaler = None
-
-    def run(self, aligned_face_patch_src):
-        self.scaler = Scaler(aligned_face_patch_src)
-        return self.scaler.scale_forward()
+from src.transformers.ComponentFactory import *
 
 def getTransformer() -> Transformer:
-    return Transformer()
-
+    return Transformer(boundingBoxFactory=BoundingBoxFactory,
+                       alignerFactory=AlignerWingFactory,
+                       balderFactory=BalderFactory,
+                       pass_through=True)

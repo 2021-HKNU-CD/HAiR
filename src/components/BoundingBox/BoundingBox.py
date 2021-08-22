@@ -9,7 +9,7 @@ class BoundingBox:
     origin_image로 부터 눈, 코, 입 좌표를 추출하고
     얼굴 중심을 구한 뒤 회전각을 구하고 Margin을 구해서 origin_image에서 bounding box를 구합니다.
     """
-
+    faceFeat = FaceFeature()
     def __init__(self, original_image: np.ndarray):
         '''
         param original_image : 1920 * 1080 크기의 카메라로 들어온 입력 이미지
@@ -19,7 +19,6 @@ class BoundingBox:
         self.rotation = None
         self.theta = None
         self.face_center = None
-        self.faceFeat = FaceFeature()
         self.image_coords = []
 
     def get_bounding_box(self):
@@ -30,7 +29,14 @@ class BoundingBox:
         # BoundingBox = 얼굴 중심 ~ Margin*(sin(회전각) + cos(회전각))
 
         # 왼쪽눈, 오른쪽눈, 입의 위치 파악
-        left_eye, right_eye, mouth = self.faceFeat.get(self.original_image)
+        try:
+            left_eye, right_eye, mouth = BoundingBox.faceFeat.get(self.original_image)
+        except Exception as e:
+            if e.args[0] == "not a single face is present in image":
+                raise ValueError('NoFaceError')
+
+
+        image_size = (len(self.original_image[0]), len(self.original_image))
 
         # 얼굴의 중심
         self.face_center = (sum((left_eye[0], right_eye[0], mouth[0])) // 3,
@@ -75,12 +81,9 @@ class BoundingBox:
         # right_lower 얼굴의 오른쪽 아래
         right_lower = (int(bottom[0] + (self.margin * math.cos(m))),
                        int(bottom[1] + (self.margin * math.sin(m))))
-
-        if left_upper[0] < 0 \
-                or left_upper[1] < 0 \
-                or right_lower[0] >= len(self.original_image[0]) \
-                or right_lower[1] >= len(self.original_image):
-            raise Exception("Bounding Box off limit")
+        for y, x in [left_upper, left_lower, right_upper, right_lower]:
+            if not 0 <= y < image_size[0] or not 0 <= x <= image_size[1]:
+                raise ValueError("BoundingBoxOffLimitError")
 
         # original_patch 의 꼭짓점 반환
         min_xy = (min([x for x in [left_upper[0], left_lower[0], right_upper[0], right_lower[0]]]),
