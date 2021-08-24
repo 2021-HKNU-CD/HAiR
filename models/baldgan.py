@@ -5,11 +5,11 @@ import cv2
 import keras.backend as K
 import matplotlib.pyplot as plt
 import numpy as np
-from keras.layers import GlobalAveragePooling2D, multiply, Permute
-from keras.layers import Input, Dense, Reshape, Dropout, Concatenate
+from tensorflow.keras.layers import GlobalAveragePooling2D, multiply, Permute
+from tensorflow.keras.layers import Input, Dense, Reshape, Dropout, Concatenate
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.convolutional import UpSampling2D, Conv2D
-from keras.models import Model
+from tensorflow.keras.models import Model
 from keras_contrib.layers.normalization.instancenormalization import InstanceNormalization
 from skimage import transform as trans
 
@@ -71,7 +71,7 @@ class BaldGAN:
 def squeeze_excite_block(input, ratio=4):
     init = input
     channel_axis = 1 if K.image_data_format() == "channels_first" else -1
-    filters = init._keras_shape[channel_axis]
+    filters = init.shape[channel_axis]
     se_shape = (1, 1, filters)
 
     se = GlobalAveragePooling2D()(init)
