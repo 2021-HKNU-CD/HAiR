@@ -18,6 +18,17 @@ REF_SIZE = len(ref_images)
 NOT_FOUND: QPixmap
 T: Transformer = None
 
+# NGROK
+PUBLIC_URL = ""
+
+
+def log_event_callback(log):
+    print(str(log))
+
+
+conf.get_default().log_event_callback = log_event_callback
+# NGROK END
+
 SIZE_POLICY = QSizePolicy.Ignored
 
 RIGHT_BOX_WIDTH = 400
@@ -28,6 +39,15 @@ DISPLAY_HEIGHT = int(DISPLAY_WIDTH * 0.5625)
 
 REF_CARO_WIDTH = 250
 REF_CARO_HEIGHT = int(REF_CARO_WIDTH * 0.5625)
+
+RESULT_CARD_WIDTH = 400
+RESULT_CARD_HEIGHT = int(RESULT_CARD_WIDTH * 0.5625)
+
+QR_WIDTH = 400
+QR_HEIGHT = 400
+
+QR_RESULT_WIDTH = 800
+QR_RESULT_HEIGHT = int(QR_RESULT_WIDTH * 0.5625)
 
 
 def set_centered_black_white(x: QWidget) -> QWidget:
@@ -47,25 +67,58 @@ def get_qimage(path: str) -> QPixmap:
     return qimage
 
 
+def ndarray_to_qpixmap(image: np.ndarray) -> QPixmap:
+    return QPixmap.fromImage(
+        qimage2ndarray
+            .array2qimage(image)
+            .rgbSwapped()
+    )
+
+
+class StartScreen(QVBoxLayout):
+    start = pyqtSignal()
+    close = pyqtSignal()
+
+    def __init__(self):
+        super(StartScreen, self).__init__()
+        self.welcome = QLabel("안녕하세요. HAiR 입니다.")
+
+        self.QR = QLabel("QR")
+        qr = qrcode.make("https://github.com/2021-HKNU-CD/HAiR")
+        self.QR.setPixmap(QPixmap.fromImage(ImageQt(qr)))
+
+        self.start_button = QPushButton("시작")
+        self.start_button.clicked.connect(self.start_clicked)
+        self.close_button = QPushButton("종료")
+        self.close_button.clicked.connect(self.close_clicked)
+
+        self.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.addWidget(self.welcome)
+        self.addWidget(self.QR)
+        self.addWidget(self.start_button)
+        self.addWidget(self.close_button)
+
+    def start_clicked(self):
+        self.start.emit()
+
+    def close_clicked(self):
+        self.close.emit()
+
+
 class DisplayWorker(QThread):
     finished = pyqtSignal(QPixmap)
 
     def __init__(self):
         super(DisplayWorker, self).__init__()
         self.setTerminationEnabled(True)
-        self.start()
+        self.go = True
 
     def run(self) -> None:
-        while T:
+        while self.go:
             image: np.ndarray = capture.get()
             t_image = T.transform(image)
-            self.finished.emit(
-                QPixmap.fromImage(
-                    qimage2ndarray
-                        .array2qimage(t_image)
-                        .rgbSwapped()
-                )
-            )
+            self.finished.emit(ndarray_to_qpixmap(t_image))
 
 
 class Display(QVBoxLayout):
@@ -260,6 +313,7 @@ class TypeSelector(QVBoxLayout):
 
 class ControlBox(QVBoxLayout):
     close = pyqtSignal()
+    result = pyqtSignal()
 
     def __init__(self):
         super(ControlBox, self).__init__()
@@ -267,6 +321,7 @@ class ControlBox(QVBoxLayout):
 
         self.completed_button = QPushButton("complete")
         self.completed_button.setFixedSize(RIGHT_BOX_WIDTH, 40)
+        self.completed_button.clicked.connect(self.result)
 
         self.close_button = QPushButton("close")
         self.close_button.setFixedSize(RIGHT_BOX_WIDTH, 40)
@@ -278,19 +333,156 @@ class ControlBox(QVBoxLayout):
     def close_signal(self):
         self.close.emit()
 
+    def result_signal(self):
+        self.result.emit()
+
+
+class ResultCard(QLabel):
+    result_clicked = pyqtSignal(int)
+
+    timestamp: int
+    image: np.ndarray
+
+    def __init__(self, data=None):
+        super(ResultCard, self).__init__()
+        self.setFixedSize(RESULT_CARD_WIDTH, RESULT_CARD_HEIGHT)
+        self.set(data)
+        self.mousePressEvent = self.clicked
+
+    def set(self, data):
+        if data:
+            self.timestamp, self.image = data
+            self.setPixmap(ndarray_to_qpixmap(self.image).scaledToWidth(RESULT_CARD_WIDTH))
+        else:
+            self.timestamp = -1
+
+    def clicked(self, event):
+        if self.timestamp > 0:
+            self.result_clicked.emit(self.timestamp)
+
+
+class Result(QWidget):
+    back_to_start = pyqtSignal()
+
+    def __init__(self, n):
+        super(Result, self).__init__()
+        self.images = [ResultCard() for _ in range(n)]
+        vertical = QVBoxLayout()
+        complete_button = QPushButton("Complete")
+        complete_button.clicked.connect(self.complete)
+
+        for i in range(0, n, 4):
+            layout = QHBoxLayout()
+            for j in range(i, i + 4):
+                layout.addWidget(self.images[j])
+            vertical.addLayout(layout)
+
+        vertical.addWidget(complete_button)
+
+        self.setLayout(vertical)
+
+    def set(self, datas: list):
+        [self.images[index].set(image) for index, image in enumerate(datas)]
+
+    def clear(self):
+        [image.set(None) for image in self.images]
+
+    def complete(self):
+        self.back_to_start.emit()
+
+
+class QR(QWidget):
+    qr_done = pyqtSignal()
+
+    def __init__(self):
+        super(QR, self).__init__()
+        vertical = QVBoxLayout()
+        vertical.setAlignment(QtCore.Qt.AlignCenter)
+
+
+
+        self.result_image = QLabel("result_image")
+        self.result_image.setAlignment(QtCore.Qt.AlignCenter)
+        self.result_image.setFixedSize(QR_RESULT_WIDTH, QR_RESULT_HEIGHT)
+
+        self.qr = QLabel("QR")
+        self.qr.setAlignment(QtCore.Qt.AlignCenter)
+        self.qr.setFixedSize(QR_WIDTH, QR_HEIGHT)
+
+        horizontal = QHBoxLayout()
+        horizontal.addWidget(self.qr)
+
+        self.url_label = QLabel()
+        self.url_label.setAlignment(QtCore.Qt.AlignCenter)
+
+        complete = QPushButton("Done")
+        complete.clicked.connect(self.clicked)
+
+        vertical.addWidget(self.result_image)
+        vertical.addLayout(horizontal)
+        vertical.addWidget(self.url_label)
+        vertical.addWidget(complete)
+
+        self.setLayout(vertical)
+
+    def clicked(self):
+        self.qr_done.emit()
+
+    def set(self, timestamp: int):
+        url = f"{PUBLIC_URL}/{timestamp}.jpg"
+        self.qr.setPixmap(
+            QPixmap.fromImage(
+                ImageQt(
+                    qrcode.make(url))
+
+            ).scaledToWidth(QR_WIDTH))
+
+        self.result_image.setPixmap(
+            ndarray_to_qpixmap(
+                list(
+                    map(
+                        lambda x: x[1],
+                        filter(
+                            lambda x: x[0] == timestamp,
+                            T.get_generated(16)
+                        ))
+                )[0]
+            ).scaledToWidth(QR_RESULT_WIDTH)
+        )
+
+        self.url_label.setText(url)
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.window_stack = QStackedWidget(self)
+        self.start_screen = StartScreen()
+        self.display_worker = DisplayWorker()
         self.display = Display()
         self.radio_box = RadioBox()
         self.reference_carousel = ReferenceCarousel()
         self.control_box = ControlBox()
         self.type_selector = TypeSelector()
+        self.result_screen = Result(16)
+        self.qr_result = QR()
 
         self.setWindowTitle("HAiR")
         self.setGeometry(0, 0, 1920, 1080)
         self.setup()
+
+    @pyqtSlot()
+    def start_signal(self):
+        T.clear()
+        self.window_stack.setCurrentIndex(1)
+        self.display_worker.go = True
+        self.display_worker.start()
+
+    @pyqtSlot()
+    def result_signal(self):
+        self.window_stack.setCurrentIndex(2)
+        self.result_screen.set(T.get_generated(16))
+        self.display_worker.go = False
 
     @pyqtSlot()
     def close_signal(self):
@@ -310,23 +502,49 @@ class MainWindow(QMainWindow):
     def get_image(self, image: QPixmap):
         self.display.set_image(image)
 
+    @pyqtSlot()
+    def back_to_start_signal(self):
+        self.window_stack.setCurrentIndex(0)
+
+    @pyqtSlot()
+    def qr_done_signal(self):
+        self.window_stack.setCurrentIndex(2)
+
+    @pyqtSlot(int)
+    def result_clicked_signal(self, timestamp: int):
+        self.qr_result.set(timestamp)
+        self.window_stack.setCurrentIndex(3)
+
     def setup(self):
+        # Start Screen
+        self.start_screen.start.connect(self.start_signal)
+        self.start_screen.close.connect(self.close_signal)
+
         # DISPLAY
-        # self.display.set_image(ref_images[2][1])
-        self.displayWorker = DisplayWorker()
-        self.displayWorker.finished.connect(self.get_image)
+        self.display_worker.finished.connect(self.get_image)
 
         # REF CAROUSEL
         [i.selected_reference.connect(self.ref_select) for i in self.reference_carousel.carousel]
 
         # CONTROL BOX
         self.control_box.close.connect(self.close_signal)
+        self.control_box.result.connect(self.result_signal)
+
+        # RESULT
+        self.result_screen.back_to_start.connect(self.back_to_start_signal)
+        [i.result_clicked.connect(self.result_clicked_signal) for i in self.result_screen.images]
+
+        # QR result
+        self.qr_result.qr_done.connect(self.qr_done_signal)
 
         # setup UI
-        window = QWidget(self)
-        self.setCentralWidget(window)
+        start = QWidget(self)
+        start.setLayout(self.start_screen)
 
-        horizontal_box = QHBoxLayout()
+        self.setCentralWidget(self.window_stack)
+
+        transform = QWidget(self)
+        transform_window = QHBoxLayout()
         left_box = QVBoxLayout()
         right_box = QVBoxLayout()
 
@@ -337,10 +555,14 @@ class MainWindow(QMainWindow):
         right_box.addLayout(self.type_selector)
         right_box.addLayout(self.control_box, 1)
 
-        horizontal_box.addLayout(left_box, 3)
-        horizontal_box.addLayout(right_box, 1)
+        transform_window.addLayout(left_box, 3)
+        transform_window.addLayout(right_box, 1)
+        transform.setLayout(transform_window)
 
-        window.setLayout(horizontal_box)
+        self.window_stack.addWidget(start)
+        self.window_stack.addWidget(transform)
+        self.window_stack.addWidget(self.result_screen)
+        self.window_stack.addWidget(self.qr_result)
 
 
 if __name__ == "__main__":
@@ -366,7 +588,11 @@ if __name__ == "__main__":
         ]
     )
 
+    PUBLIC_URL = ngrok.connect("file://" + BASE_DIR + '/../../generated').public_url
+
     mainWindow = MainWindow()
     mainWindow.showFullScreen()
     ret = app.exec_()
+    ngrok.disconnect(PUBLIC_URL)
+    T.clear()
     sys.exit(ret)

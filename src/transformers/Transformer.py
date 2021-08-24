@@ -1,14 +1,25 @@
+import os
+import time
+from shutil import rmtree
+
+import cv2
 import numpy as np
 
 from src.components.MaskOrientGenerator.MaskOrientGenerator import MaskOrientGenerator
-from src.components.Scaler.Scaler import Scaler
+from src.transformers.ComponentFactory import *
 from src.util.sender import Sender
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 class Transformer:
     ref_cache = {}
-    def __init__(self, boundingBoxFactory, alignerFactory, balderFactory, caching=True, pass_through=False):
+    generated = []
+
+    def __init__(self, boundingBoxFactory, alignerFactory, balderFactory, caching=True, pass_through=False, save=False):
         self.caching = caching
         self.pass_through = pass_through
+        self.save = save
 
         self.boundingBoxFactory = boundingBoxFactory
         self.alignerFactory = alignerFactory
@@ -42,6 +53,9 @@ class Transformer:
 
         try:
             aligner = self.alignerFactory(boundingBox)
+        except ValueError as v:
+            print("valueError:", v)
+            return original_image
         except Exception as e:
             print(e)
             return original_image
@@ -76,7 +90,7 @@ class Transformer:
         # None인 항목은 src의 속성을 유지하도록 변환
         datas = {
             'label_ref': appearance_mask,  # appearance
-            'label_tag': shape_mask, # shape
+            'label_tag': shape_mask,  # shape
 
             'orient_mask': shape_mask,  # structure ref mask
             'orient_tag': orient,  # src orient ???????
@@ -89,7 +103,14 @@ class Transformer:
 
         generated = balder.scaler.scale_backward(generated)
         generated = aligner.align_backward(generated)
-        return boundingBox.set_origin_patch(generated)
+        ret = boundingBox.set_origin_patch(generated)
+
+        if self.save:
+            created = int(time.time() * 100000 % 1000000)
+            self.generated.append([created, ret])
+            cv2.imwrite(BASE_DIR + f'/../../generated/{created}.jpg', ret)
+
+        return ret
 
     def _ref_preprocess(self, ref_img):
         if self.caching:
@@ -130,10 +151,21 @@ class Transformer:
         }
         return ret
 
-from src.transformers.ComponentFactory import *
+    def clear(self):
+        self.generated = []
+        try:
+            rmtree(BASE_DIR + '/../../generated')
+        except:
+            pass
+        os.mkdir(BASE_DIR + '/../../generated')
+
+    def get_generated(self, n: int = 8):
+        return list(reversed(self.generated))[:n]
+
 
 def getTransformer() -> Transformer:
     return Transformer(boundingBoxFactory=BoundingBoxFactory,
                        alignerFactory=AlignerWingFactory,
                        balderFactory=BalderFactory,
-                       pass_through=True)
+                       pass_through=True,
+                       save=True)

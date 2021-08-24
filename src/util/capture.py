@@ -9,7 +9,7 @@ class Capture:
 
     def get(self) -> np.ndarray:
         ret, image = self.capture_dev.read()
-        return image
+        return cv2.flip(image, 1)
 
     def destroy(self) -> None:
         self.capture_dev.release()
