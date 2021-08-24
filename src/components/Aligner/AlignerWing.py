@@ -18,8 +18,8 @@ class AlignerWing:
     aling_backward시
     헤어스타일이 변경된 align_patch를 받으면 원래 origin_patch에 덮어쓴 origin_patch를 반환
     """
-    FaceAligner = FaceAligner(os.path.join(BASE_DIR, '..\\..\\..\\models\\checkpoints\\wing\\wing.ckpt'),
-                                   os.path.join(BASE_DIR, '..\\..\\..\\models\\checkpoints\\wing\\celeba_lm_mean.npz'),
+    FaceAligner = FaceAligner(os.path.join(BASE_DIR, '../../../models/checkpoints/wing/wing.ckpt'),
+                                   os.path.join(BASE_DIR, '../../../models/checkpoints/wing/celeba_lm_mean.npz'),
                                    512)
 
     def __init__(self, bounding_box: BoundingBox = None):
