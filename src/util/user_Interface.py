@@ -4,10 +4,13 @@ import sys
 import cv2
 import numpy as np
 import qimage2ndarray
+import qrcode
+from PIL.ImageQt import ImageQt
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QThread
 from PyQt5.QtWidgets import *
 from PyQt5 import QtCore
 from PyQt5.QtGui import *
+from pyngrok import ngrok, conf
 
 from src.transformers.Transformer import Transformer, getTransformer
 from src.util.capture import Capture
