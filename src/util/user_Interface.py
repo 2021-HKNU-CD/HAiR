@@ -116,12 +116,14 @@ class DisplayWorker(QThread):
         super(DisplayWorker, self).__init__()
         self.setTerminationEnabled(True)
         self.go = True
+        self.image = None
 
     def run(self) -> None:
         while self.go:
-            image: np.ndarray = capture.get()
-            t_image = T.transform(image)
-            self.finished.emit(ndarray_to_qpixmap(t_image))
+            self.image: np.ndarray = capture.get()
+            # t_image = T.transform(image)
+
+            self.finished.emit(ndarray_to_qpixmap(self.image))
 
 
 class Display(QVBoxLayout):
