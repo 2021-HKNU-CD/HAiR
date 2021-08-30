@@ -1,12 +1,13 @@
 import os
 import sys
+import time
 
 import cv2
 import numpy as np
 import qimage2ndarray
 import qrcode
 from PIL.ImageQt import ImageQt
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, QThread
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QThread, QObject, QRunnable, QThreadPool
 from PyQt5.QtWidgets import *
 from PyQt5 import QtCore
 from PyQt5.QtGui import *
@@ -22,14 +23,14 @@ NOT_FOUND: QPixmap
 T: Transformer = None
 
 # NGROK
-PUBLIC_URL = ""
-
-
-def log_event_callback(log):
-    print(str(log))
-
-
-conf.get_default().log_event_callback = log_event_callback
+# PUBLIC_URL = ""
+#
+#
+# def log_event_callback(log):
+#     print(str(log))
+#
+#
+# conf.get_default().log_event_callback = log_event_callback
 # NGROK END
 
 SIZE_POLICY = QSizePolicy.Ignored
@@ -42,9 +43,6 @@ DISPLAY_HEIGHT = int(DISPLAY_WIDTH * 0.5625)
 
 REF_CARO_WIDTH = 250
 REF_CARO_HEIGHT = int(REF_CARO_WIDTH * 0.5625)
-
-RESULT_CARD_WIDTH = 400
-RESULT_CARD_HEIGHT = int(RESULT_CARD_WIDTH * 0.5625)
 
 QR_WIDTH = 400
 QR_HEIGHT = 400
@@ -86,10 +84,6 @@ class StartScreen(QVBoxLayout):
         super(StartScreen, self).__init__()
         self.welcome = QLabel("안녕하세요. HAiR 입니다.")
 
-        self.QR = QLabel("QR")
-        qr = qrcode.make("https://github.com/2021-HKNU-CD/HAiR")
-        self.QR.setPixmap(QPixmap.fromImage(ImageQt(qr)))
-
         self.start_button = QPushButton("시작")
         self.start_button.clicked.connect(self.start_clicked)
         self.close_button = QPushButton("종료")
@@ -98,7 +92,6 @@ class StartScreen(QVBoxLayout):
         self.setAlignment(QtCore.Qt.AlignCenter)
 
         self.addWidget(self.welcome)
-        self.addWidget(self.QR)
         self.addWidget(self.start_button)
         self.addWidget(self.close_button)
 
@@ -124,6 +117,24 @@ class DisplayWorker(QThread):
             # t_image = T.transform(image)
 
             self.finished.emit(ndarray_to_qpixmap(self.image))
+
+
+class TransformerSignal(QObject):
+    transformed = pyqtSignal(np.ndarray)
+
+
+class TransformWorker(QRunnable):
+    def __init__(self):
+        super(TransformWorker, self).__init__()
+        self.signal = TransformerSignal()
+
+    def run(self):
+        print('transform runnable')
+        image = capture.get()
+        transformed_image = T.transform(image)
+        if (transformed_image == image).all():
+            self.signal.transformed.emit(np.ndarray([0]))
+        self.signal.transformed.emit(transformed_image)
 
 
 class Display(QVBoxLayout):
@@ -339,65 +350,11 @@ class ControlBox(QVBoxLayout):
         self.transform.emit()
 
 
-class ResultCard(QLabel):
-    result_clicked = pyqtSignal(int)
-
-    timestamp: int
-    image: np.ndarray
-
-    def __init__(self, data=None):
-        super(ResultCard, self).__init__()
-        self.setFixedSize(RESULT_CARD_WIDTH, RESULT_CARD_HEIGHT)
-        self.set(data)
-        self.mousePressEvent = self.clicked
-
-    def set(self, data):
-        if data:
-            self.timestamp, self.image = data
-            self.setPixmap(ndarray_to_qpixmap(self.image).scaledToWidth(RESULT_CARD_WIDTH))
-        else:
-            self.timestamp = -1
-
-    def clicked(self, event):
-        if self.timestamp > 0:
-            self.result_clicked.emit(self.timestamp)
-
-
 class Result(QWidget):
-    back_to_start = pyqtSignal()
-
-    def __init__(self, n):
-        super(Result, self).__init__()
-        self.images = [ResultCard() for _ in range(n)]
-        vertical = QVBoxLayout()
-        complete_button = QPushButton("Complete")
-        complete_button.clicked.connect(self.complete)
-
-        for i in range(0, n, 4):
-            layout = QHBoxLayout()
-            for j in range(i, i + 4):
-                layout.addWidget(self.images[j])
-            vertical.addLayout(layout)
-
-        vertical.addWidget(complete_button)
-
-        self.setLayout(vertical)
-
-    def set(self, datas: list):
-        [self.images[index].set(image) for index, image in enumerate(datas)]
-
-    def clear(self):
-        [image.set(None) for image in self.images]
-
-    def complete(self):
-        self.back_to_start.emit()
-
-
-class QR(QWidget):
     qr_done = pyqtSignal()
 
     def __init__(self):
-        super(QR, self).__init__()
+        super(Result, self).__init__()
         vertical = QVBoxLayout()
         vertical.setAlignment(QtCore.Qt.AlignCenter)
 
@@ -405,22 +362,10 @@ class QR(QWidget):
         self.result_image.setAlignment(QtCore.Qt.AlignCenter)
         self.result_image.setFixedSize(QR_RESULT_WIDTH, QR_RESULT_HEIGHT)
 
-        self.qr = QLabel("QR")
-        self.qr.setAlignment(QtCore.Qt.AlignCenter)
-        self.qr.setFixedSize(QR_WIDTH, QR_HEIGHT)
-
-        horizontal = QHBoxLayout()
-        horizontal.addWidget(self.qr)
-
-        self.url_label = QLabel()
-        self.url_label.setAlignment(QtCore.Qt.AlignCenter)
-
         complete = QPushButton("Done")
         complete.clicked.connect(self.clicked)
 
         vertical.addWidget(self.result_image)
-        vertical.addLayout(horizontal)
-        vertical.addWidget(self.url_label)
         vertical.addWidget(complete)
 
         self.setLayout(vertical)
@@ -428,29 +373,36 @@ class QR(QWidget):
     def clicked(self):
         self.qr_done.emit()
 
-    def set(self, timestamp: int):
-        url = f"{PUBLIC_URL}/{timestamp}.jpg"
-        self.qr.setPixmap(
-            QPixmap.fromImage(
-                ImageQt(
-                    qrcode.make(url))
-
-            ).scaledToWidth(QR_WIDTH))
-
+    def set(self, image: np.ndarray):
         self.result_image.setPixmap(
             ndarray_to_qpixmap(
-                list(
-                    map(
-                        lambda x: x[1],
-                        filter(
-                            lambda x: x[0] == timestamp,
-                            T.get_generated(16)
-                        ))
-                )[0]
+                image
             ).scaledToWidth(QR_RESULT_WIDTH)
         )
 
-        self.url_label.setText(url)
+
+class Transforming(QWidget):
+    def __init__(self):
+        super(Transforming, self).__init__()
+        vertical = QVBoxLayout()
+        vertical.setAlignment(QtCore.Qt.AlignCenter)
+
+        transforming = QLabel("TRANSFORMING")
+        transforming.setAlignment(QtCore.Qt.AlignCenter)
+        vertical.addWidget(transforming)
+        self.setLayout(vertical)
+
+
+class Retry(QWidget):
+    def __init__(self):
+        super(Retry, self).__init__()
+        vertical = QVBoxLayout()
+        vertical.setAlignment(QtCore.Qt.AlignCenter)
+
+        transforming = QLabel("RETRY")
+        transforming.setAlignment(QtCore.Qt.AlignCenter)
+        vertical.addWidget(transforming)
+        self.setLayout(vertical)
 
 
 class MainWindow(QMainWindow):
@@ -464,8 +416,10 @@ class MainWindow(QMainWindow):
         self.reference_carousel = ReferenceCarousel()
         self.control_box = ControlBox()
         self.type_selector = TypeSelector()
-        self.result_screen = Result(16)
-        self.qr_result = QR()
+        self.result = Result()
+        self.transforming = Transforming()
+        self.transform_worker = TransformWorker()
+        self.retry = Retry()
 
         self.setWindowTitle("HAiR")
         self.setGeometry(0, 0, 1920, 1080)
@@ -473,16 +427,9 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def start_signal(self):
-        T.clear()
         self.window_stack.setCurrentIndex(1)
         self.display_worker.go = True
         self.display_worker.start()
-
-    @pyqtSlot()
-    def transform_signal(self):
-        self.window_stack.setCurrentIndex(2)
-        self.result_screen.set(T.get_generated(16))
-        self.display_worker.go = False
 
     @pyqtSlot()
     def close_signal(self):
@@ -507,12 +454,38 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def qr_done_signal(self):
-        self.window_stack.setCurrentIndex(2)
+        self.window_stack.setCurrentIndex(0)
 
     @pyqtSlot(int)
     def result_clicked_signal(self, timestamp: int):
         self.qr_result.set(timestamp)
         self.window_stack.setCurrentIndex(3)
+
+    @pyqtSlot()
+    def transform_signal(self):
+        self.window_stack.setCurrentIndex(3)
+        self.display_worker.go = False
+
+        pool = QThreadPool.globalInstance()
+        pool.start(self.transform_worker)
+        self.transform_worker = TransformWorker()
+        self.transform_worker.signal.transformed.connect(self.transformed_signal)
+
+    @pyqtSlot(np.ndarray)
+    def transformed_signal(self, image: np.ndarray):
+
+        try:
+            self.result.set(image)
+            self.window_stack.setCurrentIndex(2)
+        except ValueError as v:
+            print(v)
+            self.window_stack.setCurrentIndex(4)
+            time.sleep(2)
+            self.window_stack.setCurrentIndex(1)
+            self.display_worker.go = True
+            self.display_worker.start()
+
+        pass
 
     def setup(self):
         # Start Screen
@@ -529,12 +502,11 @@ class MainWindow(QMainWindow):
         self.control_box.close.connect(self.close_signal)
         self.control_box.transform.connect(self.transform_signal)
 
-        # RESULT
-        self.result_screen.back_to_start.connect(self.back_to_start_signal)
-        [i.result_clicked.connect(self.result_clicked_signal) for i in self.result_screen.images]
-
         # QR result
-        self.qr_result.qr_done.connect(self.qr_done_signal)
+        self.result.qr_done.connect(self.qr_done_signal)
+
+        # Transform thread
+        self.transform_worker.signal.transformed.connect(self.transformed_signal)
 
         # setup UI
         start = QWidget(self)
@@ -558,15 +530,16 @@ class MainWindow(QMainWindow):
         transform_window.addLayout(right_box, 1)
         transform.setLayout(transform_window)
 
-        self.window_stack.addWidget(start)
-        self.window_stack.addWidget(transform)
-        self.window_stack.addWidget(self.result_screen)
-        self.window_stack.addWidget(self.qr_result)
+        self.window_stack.addWidget(start)  # 0
+        self.window_stack.addWidget(transform)  # 1
+        self.window_stack.addWidget(self.result)  # 2
+        self.window_stack.addWidget(self.transforming)  # 3
+        self.window_stack.addWidget(self.retry)  # 4
 
 
 if __name__ == "__main__":
     T = getTransformer()
-    capture = Capture(1)
+    capture = Capture(0)
     app = QApplication(sys.argv)
 
     print(ref_images)
@@ -587,11 +560,11 @@ if __name__ == "__main__":
         ]
     )
 
-    PUBLIC_URL = ngrok.connect("file://" + BASE_DIR + '/../../generated').public_url
+    # PUBLIC_URL = ngrok.connect("file://" + BASE_DIR + '/../../generated').public_url
 
     mainWindow = MainWindow()
     mainWindow.showFullScreen()
     ret = app.exec_()
-    ngrok.disconnect(PUBLIC_URL)
+    # ngrok.disconnect(PUBLIC_URL)
     T.clear()
     sys.exit(ret)
