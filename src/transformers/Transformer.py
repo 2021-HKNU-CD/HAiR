@@ -143,17 +143,6 @@ class Transformer:
         }
         return ret
 
-    def clear(self):
-        self.generated = []
-        try:
-            rmtree(BASE_DIR + '/../../generated')
-        except:
-            pass
-        os.mkdir(BASE_DIR + '/../../generated')
-
-    def get_generated(self, n: int = 8):
-        return list(reversed(self.generated))[:n]
-
 
 def getTransformer() -> Transformer:
     return Transformer(boundingBoxFactory=BoundingBoxFactory,
