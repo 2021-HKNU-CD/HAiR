@@ -315,28 +315,28 @@ class TypeSelector(QVBoxLayout):
 
 class ControlBox(QVBoxLayout):
     close = pyqtSignal()
-    result = pyqtSignal()
+    transform = pyqtSignal()
 
     def __init__(self):
         super(ControlBox, self).__init__()
         self.setAlignment(QtCore.Qt.AlignCenter)
 
-        self.completed_button = QPushButton("transform")
-        self.completed_button.setFixedSize(RIGHT_BOX_WIDTH, 40)
-        self.completed_button.clicked.connect(self.result)
+        self.transform_button = QPushButton("transform")
+        self.transform_button.setFixedSize(RIGHT_BOX_WIDTH, 40)
+        self.transform_button.clicked.connect(self.transform)
 
         self.close_button = QPushButton("close")
         self.close_button.setFixedSize(RIGHT_BOX_WIDTH, 40)
         self.close_button.clicked.connect(self.close)
 
-        self.addWidget(self.completed_button)
+        self.addWidget(self.transform_button)
         self.addWidget(self.close_button)
 
     def close_signal(self):
         self.close.emit()
 
     def result_signal(self):
-        self.result.emit()
+        self.transform.emit()
 
 
 class ResultCard(QLabel):
@@ -479,7 +479,7 @@ class MainWindow(QMainWindow):
         self.display_worker.start()
 
     @pyqtSlot()
-    def result_signal(self):
+    def transform_signal(self):
         self.window_stack.setCurrentIndex(2)
         self.result_screen.set(T.get_generated(16))
         self.display_worker.go = False
@@ -527,7 +527,7 @@ class MainWindow(QMainWindow):
 
         # CONTROL BOX
         self.control_box.close.connect(self.close_signal)
-        self.control_box.result.connect(self.result_signal)
+        self.control_box.transform.connect(self.transform_signal)
 
         # RESULT
         self.result_screen.back_to_start.connect(self.back_to_start_signal)
