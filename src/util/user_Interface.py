@@ -7,12 +7,13 @@ import numpy as np
 import qimage2ndarray
 import qrcode
 from PIL.ImageQt import ImageQt
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, QThread, QObject, QRunnable, QThreadPool
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QThread, QObject, QRunnable, QThreadPool, QTimer
 from PyQt5.QtWidgets import *
 from PyQt5 import QtCore
 from PyQt5.QtGui import *
 from pyngrok import ngrok, conf
 
+from src.components.Aligner.AlignerWing import AlignerWing
 from src.transformers.Transformer import Transformer, getTransformer
 from src.util.capture import Capture
 
@@ -49,6 +50,10 @@ QR_HEIGHT = 400
 
 QR_RESULT_WIDTH = 800
 QR_RESULT_HEIGHT = int(QR_RESULT_WIDTH * 0.5625)
+
+CELEB_REF = list(map(lambda y: (int(y[0]), int(y[1])), AlignerWing.FaceAligner.CELEB_REF))
+OFFSET_Y = 52
+OFFSET_X = 384
 
 
 def set_centered_black_white(x: QWidget) -> QWidget:
@@ -109,14 +114,16 @@ class DisplayWorker(QThread):
         super(DisplayWorker, self).__init__()
         self.setTerminationEnabled(True)
         self.go = True
-        self.image = None
 
     def run(self) -> None:
         while self.go:
-            self.image: np.ndarray = capture.get()
+            image: np.ndarray = capture.get()
+
+            for x,y in CELEB_REF:
+                image = cv2.line(image, (OFFSET_X + x, OFFSET_Y + y), (OFFSET_X + x, OFFSET_Y + y), (255, 0, 0), 5)
             # t_image = T.transform(image)
 
-            self.finished.emit(ndarray_to_qpixmap(self.image))
+            self.finished.emit(ndarray_to_qpixmap(image))
 
 
 class TransformerSignal(QObject):
@@ -129,12 +136,13 @@ class TransformWorker(QRunnable):
         self.signal = TransformerSignal()
 
     def run(self):
-        print('transform runnable')
         image = capture.get()
+
         transformed_image = T.transform(image)
         if (transformed_image == image).all():
             self.signal.transformed.emit(np.ndarray([0]))
-        self.signal.transformed.emit(transformed_image)
+        else:
+            self.signal.transformed.emit(transformed_image)
 
 
 class Display(QVBoxLayout):
@@ -473,19 +481,22 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot(np.ndarray)
     def transformed_signal(self, image: np.ndarray):
+        if image.ndim == 1:
 
-        try:
-            self.result.set(image)
-            self.window_stack.setCurrentIndex(2)
-        except ValueError as v:
-            print(v)
             self.window_stack.setCurrentIndex(4)
-            time.sleep(2)
-            self.window_stack.setCurrentIndex(1)
+            QTimer().singleShot(2000, self.setindex1)
             self.display_worker.go = True
             self.display_worker.start()
+        else:
+            self.result.set(image)
+            self.window_stack.setCurrentIndex(2)
+
+
 
         pass
+
+    def setindex1(self):
+        self.window_stack.setCurrentIndex(1)
 
     def setup(self):
         # Start Screen
