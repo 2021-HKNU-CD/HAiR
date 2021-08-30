@@ -151,14 +151,12 @@ class RadioBox(QGroupBox):
         layout.setAlignment(QtCore.Qt.AlignCenter)
         self.appearance = QRadioButton("Appearance")
         self.appearance.setChecked(True)
-        self.shape = QRadioButton("Shape")
-        self.structure = QRadioButton("Structure")
+        self.shapeStructure = QRadioButton("ShapeStructure")
 
         layout.addWidget(self.appearance)
-        layout.addWidget(self.shape)
-        layout.addWidget(self.structure)
+        layout.addWidget(self.shapeStructure)
 
-        [i.clicked.connect(self.clicked) for i in [self.appearance, self.shape, self.structure]]
+        [i.clicked.connect(self.clicked) for i in [self.appearance, self.shapeStructure]]
 
         self.setLayout(layout)
         self.setTitle('타입을 고르세요!')
@@ -167,7 +165,7 @@ class RadioBox(QGroupBox):
         self.type = "".join(
             map(lambda x: x.text(),
                 filter(lambda x: x.isChecked(),
-                       [self.appearance, self.shape, self.structure])))
+                       [self.appearance, self.shapeStructure])))
 
 
 class Reference(QLabel):
@@ -279,9 +277,8 @@ class ReferenceViewer(QVBoxLayout):
         T.set_shape_ref(self.label.text())
         if self.image.text() == "Appearance":
             T.set_appearance_ref(None)
-        elif self.image.text() == "Shape":
-            T.set_shape_ref(None)
         else:
+            T.set_shape_ref(None)
             T.set_structure_ref(None)
 
 
@@ -292,8 +289,8 @@ class TypeSelector(QVBoxLayout):
 
         self.selectors = {
             "Appearance": ReferenceViewer('Appearance'),
-            "Shape": ReferenceViewer("Shape"),
-            "Structure": ReferenceViewer("Structure")
+            "ShapeStructure": ReferenceViewer("ShapeStructure"),
+
         }
         [self.addLayout(value, 1) for value in self.selectors.values()]
 
@@ -324,7 +321,7 @@ class ControlBox(QVBoxLayout):
         super(ControlBox, self).__init__()
         self.setAlignment(QtCore.Qt.AlignCenter)
 
-        self.completed_button = QPushButton("complete")
+        self.completed_button = QPushButton("transform")
         self.completed_button.setFixedSize(RIGHT_BOX_WIDTH, 40)
         self.completed_button.clicked.connect(self.result)
 
@@ -403,8 +400,6 @@ class QR(QWidget):
         super(QR, self).__init__()
         vertical = QVBoxLayout()
         vertical.setAlignment(QtCore.Qt.AlignCenter)
-
-
 
         self.result_image = QLabel("result_image")
         self.result_image.setAlignment(QtCore.Qt.AlignCenter)
@@ -498,9 +493,8 @@ class MainWindow(QMainWindow):
         self.type_selector.set_reference(self.radio_box.type, index)
         if self.radio_box.type == "Appearance":
             T.set_appearance_ref(ref_images[index][0])
-        elif self.radio_box.type == "Shape":
-            T.set_shape_ref(ref_images[index][0])
         else:
+            T.set_shape_ref(ref_images[index][0])
             T.set_structure_ref(ref_images[index][0])
 
     @pyqtSlot(QPixmap)
