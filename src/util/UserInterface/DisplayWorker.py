@@ -26,7 +26,12 @@ class DisplayWorker(QThread):
 
             self.finished.emit(ndarray_to_qpixmap(image))
 
+def get_landmarks():
+    celeb_ref = AlignerWing.FaceAligner.CELEB_REF.tolist()
+    del celeb_ref[:33]
+    del celeb_ref[77-33:82-33]
+    return celeb_ref
 
-CELEB_REF = list(map(lambda y: (int(y[0]), int(y[1])), AlignerWing.FaceAligner.CELEB_REF))
+CELEB_REF = list(map(lambda y: (int(y[0]), int(y[1])), get_landmarks()))
 OFFSET_Y = 52
 OFFSET_X = 384
