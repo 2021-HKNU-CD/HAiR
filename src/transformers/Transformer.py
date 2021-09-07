@@ -14,12 +14,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class Transformer:
     ref_cache = {}
-    generated = []
 
-    def __init__(self, boundingBoxFactory, alignerFactory, balderFactory, caching=True, pass_through=False, save=False):
+    def __init__(self, boundingBoxFactory, alignerFactory, balderFactory, caching=True, pass_through=False):
         self.caching = caching
         self.pass_through = pass_through
-        self.save = save
 
         self.boundingBoxFactory = boundingBoxFactory
         self.alignerFactory = alignerFactory
@@ -104,12 +102,6 @@ class Transformer:
         generated = balder.scaler.scale_backward(generated)
         generated = aligner.align_backward(generated)
         ret = boundingBox.set_origin_patch(generated)
-
-        if self.save:
-            created = int(time.time() * 100000 % 1000000)
-            self.generated.append([created, ret])
-            cv2.imwrite(BASE_DIR + f'/../../generated/{created}.jpg', ret)
-
         return ret
 
     def _ref_preprocess(self, ref_img):
@@ -151,21 +143,9 @@ class Transformer:
         }
         return ret
 
-    def clear(self):
-        self.generated = []
-        try:
-            rmtree(BASE_DIR + '/../../generated')
-        except:
-            pass
-        os.mkdir(BASE_DIR + '/../../generated')
-
-    def get_generated(self, n: int = 8):
-        return list(reversed(self.generated))[:n]
-
 
 def getTransformer() -> Transformer:
     return Transformer(boundingBoxFactory=BoundingBoxFactory,
                        alignerFactory=AlignerWingFactory,
                        balderFactory=BalderFactory,
-                       pass_through=True,
-                       save=True)
+                       pass_through=True, )
