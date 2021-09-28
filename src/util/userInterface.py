@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import *
 from PyQt5 import QtCore
 from PyQt5.QtGui import *
 
+from src.components.BoundingBox.BoundingBox import BoundingBox
 from src.transformers.Transformer import Transformer, getTransformer
 from src.util.UserInterface.ControlBox import ControlBox
 from src.util.UserInterface.Display import Display
@@ -18,6 +19,7 @@ from src.util.UserInterface.Result import Result
 from src.util.UserInterface.StartScreen import StartScreen
 from src.util.UserInterface.TransformWorker import TransformWorker
 from src.util.UserInterface.TypeSelector import TypeSelector
+from src.util.UserInterface.ndarrayToQpixmap import ndarray_to_qpixmap
 from src.util.capture import Capture
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -32,9 +34,16 @@ def set_align_center(x: QWidget) -> QWidget:
 
 
 def get_qimage(path: str) -> QPixmap:
-    qimage = QPixmap()
-    qimage.load(path, flags=QtCore.Qt.AutoColor)
-    return qimage
+    from src.util.UserInterface.ndarrayToQpixmap import ndarray_to_qpixmap
+    np_image = cv2.imread(path)
+    bounding_box = BoundingBox(np_image)
+    try:
+        bounding_box.get_bounding_box()
+    except ValueError as V:
+        print(f"when processing {path} {V}")
+    except TypeError as T:
+        print(f"when processing {path} {T}")
+    return ndarray_to_qpixmap(bounding_box.get_origin_patch())
 
 
 class MainWindow(QMainWindow):
@@ -201,7 +210,7 @@ if __name__ == "__main__":
     ref_images.append(
         [
             cv2.imread(BASE_DIR + '/image_not_selected.png'),
-            get_qimage(BASE_DIR + '/image_not_selected.png')
+            ndarray_to_qpixmap(cv2.imread(BASE_DIR + '/image_not_selected.png'))
         ]
     )
 
